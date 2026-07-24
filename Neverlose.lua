@@ -10,7 +10,6 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local ScriptStartTime = tick()
 
--- Иконка перетаскивания для телефонов
 local URL_MOVE_ICON = "https://img.icons8.com/ios-glyphs/60/move.png"
 
 local function GetAsset(url, filename, fallback)
@@ -57,7 +56,6 @@ local function Tween(obj, time, props)
     return t
 end
 
--- Функция перетаскивания (с поддержкой Touch / Мобильных устройств)
 local function MakeDraggable(gui, handle)
     local dragging, dragInput, dragStart, startPos
     handle = handle or gui
@@ -111,7 +109,7 @@ function Neverlose:CreateWindow(config)
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = parent
 
-    -- ПЛАВАЮЩАЯ КНОПКА ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ (ОТКРЫТЬ/СКРЫТЬ МЕНЮ)
+    -- Плавающая кнопка для мобильных
     local MobileToggleButton = Instance.new("TextButton")
     MobileToggleButton.Name = "MobileToggleButton"
     MobileToggleButton.Size = UDim2.new(0, 44, 0, 44)
@@ -135,7 +133,6 @@ function Neverlose:CreateWindow(config)
 
     MakeDraggable(MobileToggleButton, MobileToggleButton)
 
-    -- Главный фрейм
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Size = UDim2.new(0, 750, 0, 520)
@@ -149,7 +146,6 @@ function Neverlose:CreateWindow(config)
     MainCorner.CornerRadius = UDim.new(0, 10)
     MainCorner.Parent = MainFrame
 
-    -- Функция скрытия/показа меню
     local function ToggleMenuVisibility()
         MainFrame.Visible = not MainFrame.Visible
     end
@@ -162,7 +158,7 @@ function Neverlose:CreateWindow(config)
         end
     end)
 
-    -- Левая панель (Sidebar)
+    -- Sidebar
     local Sidebar = Instance.new("Frame")
     Sidebar.Name = "Sidebar"
     Sidebar.Size = UDim2.new(0, 185, 1, 0)
@@ -174,7 +170,6 @@ function Neverlose:CreateWindow(config)
     SideCorner.CornerRadius = UDim.new(0, 10)
     SideCorner.Parent = Sidebar
 
-    -- Логотип NL
     local LogoFrame = Instance.new("Frame")
     LogoFrame.Size = UDim2.new(1, 0, 0, 65)
     LogoFrame.BackgroundTransparency = 1
@@ -248,7 +243,7 @@ function Neverlose:CreateWindow(config)
     TabPadding.PaddingRight = UDim.new(0, 10)
     TabPadding.Parent = TabButtonContainer
 
-    -- МИНИ-ПРОФИЛЬ
+    -- Мини-профиль
     local ProfileFrame = Instance.new("TextButton")
     ProfileFrame.Size = UDim2.new(1, -20, 0, 50)
     ProfileFrame.Position = UDim2.new(0, 10, 1, -60)
@@ -304,7 +299,7 @@ function Neverlose:CreateWindow(config)
     UsernameLabel.BackgroundTransparency = 1
     UsernameLabel.Parent = ProfileFrame
 
-    -- МОДАЛЬНОЕ ОКНО ИНФОРМАЦИИ ОБ АККАУНТЕ И СЕССИИ (ПО КЛИКУ НА ПРОФИЛЬ)
+    -- Окно Информации об Аккаунте
     local SessionModal = Instance.new("Frame")
     SessionModal.Size = UDim2.new(0, 280, 0, 220)
     SessionModal.Position = UDim2.new(0.5, -140, 0.5, -110)
@@ -361,7 +356,6 @@ function Neverlose:CreateWindow(config)
         SessionModal.Visible = false
     end)
 
-    -- Обновление статистики в реальном времени
     RunService.RenderStepped:Connect(function()
         if SessionModal.Visible and LocalPlayer then
             local sessionTime = math.floor(tick() - ScriptStartTime)
@@ -392,7 +386,7 @@ function Neverlose:CreateWindow(config)
         SessionModal.Visible = not SessionModal.Visible
     end)
 
-    -- Шапка с Поиском и Иконкой Перетаскивания для Телефонов
+    -- Header
     local Header = Instance.new("Frame")
     Header.Size = UDim2.new(1, -185, 0, 45)
     Header.Position = UDim2.new(0, 185, 0, 0)
@@ -401,7 +395,6 @@ function Neverlose:CreateWindow(config)
 
     MakeDraggable(MainFrame, Header)
 
-    -- Иконка перетаскивания для мобильных телефонов (Move Icon)
     local MoveDragIcon = Instance.new("ImageButton")
     MoveDragIcon.Size = UDim2.new(0, 22, 0, 22)
     MoveDragIcon.Position = UDim2.new(0, 10, 0.5, -11)
@@ -434,7 +427,7 @@ function Neverlose:CreateWindow(config)
     ContentArea.BackgroundTransparency = 1
     ContentArea.Parent = MainFrame
 
-    -- ESP PREVIEW ПАНЕЛЬ С ГАРАНТИРОВАННОЙ T-ПОЗОЙ
+    -- ESP PREVIEW ЖИВОЙ АНИМИРОВАННЫЙ ПЕРСОНАЖ
     local ESPPreviewFrame, ViewportCamera, PreviewModel, ESPBoxOutline, WorldModel
     local espBoxColor = Color3.fromRGB(0, 180, 255)
 
@@ -468,61 +461,87 @@ function Neverlose:CreateWindow(config)
     Viewport.Parent = ESPPreviewFrame
 
     ViewportCamera = Instance.new("Camera")
-    ViewportCamera.CFrame = CFrame.new(Vector3.new(0, 2.8, 5.5), Vector3.new(0, 2.8, 0))
+    ViewportCamera.CFrame = CFrame.new(Vector3.new(0, 0, 5.5), Vector3.new(0, 0, 0))
     Viewport.CurrentCamera = ViewportCamera
 
     WorldModel = Instance.new("WorldModel")
     WorldModel.Parent = Viewport
 
-    -- СОЗДАНИЕ ГАРАНТИРОВАННОЙ T-ПОЗЫ ДЛЯ ESP PREVIEW
-    local function LoadTPosePreview()
-        if LocalPlayer then
-            local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-            if char then
-                char.Archivable = true
-                if PreviewModel then PreviewModel:Destroy() end
-                PreviewModel = char:Clone()
-
-                -- Заморозка частей тела в T-Позе
-                for _, item in ipairs(PreviewModel:GetDescendants()) do
-                    if item:IsA("Script") or item:IsA("LocalScript") or item:IsA("Animator") then
-                        item:Destroy()
-                    end
-                    if item:IsA("BasePart") then
-                        item.Anchored = true
-                        item.CanCollide = false
-                        if item.Name ~= "HumanoidRootPart" then
-                            item.Transparency = 0
-                            item.LocalTransparencyModifier = 0
-                        end
-                    end
-                    if item:IsA("Motor6D") then
-                        item.C0 = CFrame.new(item.C0.Position)
-                        item.C1 = CFrame.new(item.C1.Position)
-                    end
-                end
-
-                PreviewModel:SetPrimaryPartCFrame(CFrame.new(0, 0, 0))
-                PreviewModel.Parent = WorldModel
-
-                if not ESPBoxOutline then
-                    ESPBoxOutline = Instance.new("Frame")
-                    ESPBoxOutline.Size = UDim2.new(0, 110, 0, 175)
-                    ESPBoxOutline.Position = UDim2.new(0.5, -55, 0.5, -87)
-                    ESPBoxOutline.BackgroundTransparency = 1
-                    ESPBoxOutline.BorderColor3 = espBoxColor
-                    ESPBoxOutline.BorderSizePixel = 2
-                    ESPBoxOutline.Parent = Viewport
-                end
-            end
-        end
-    end
-
-    task.spawn(LoadTPosePreview)
-
     local isRotating = false
     local lastMousePos = Vector3.new()
     local currentRotation = 0
+
+    -- ИНИЦИАЛИЗАЦИЯ И СИНХРОНИЗАЦИЯ ДВИЖЕНИЙ В РЕАЛЬНОМ ВРЕМЕНИ
+    local partMap = {}
+
+    local function SetupLivePreview()
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        if not char then return end
+
+        char.Archivable = true
+        if PreviewModel then PreviewModel:Destroy() end
+        partMap = {}
+
+        PreviewModel = char:Clone()
+
+        for _, item in ipairs(PreviewModel:GetDescendants()) do
+            if item:IsA("Script") or item:IsA("LocalScript") or item:IsA("Animator") or item:IsA("Humanoid") then
+                item:Destroy()
+            end
+            if item:IsA("BasePart") then
+                item.Anchored = true
+                item.CanCollide = false
+                if item.Name ~= "HumanoidRootPart" then
+                    item.Transparency = 0
+                    item.LocalTransparencyModifier = 0
+                else
+                    item.Transparency = 1
+                end
+
+                local origPart = char:FindFirstChild(item.Name, true)
+                if origPart then
+                    partMap[item] = origPart
+                end
+            end
+        end
+
+        PreviewModel.Parent = WorldModel
+
+        if not ESPBoxOutline then
+            ESPBoxOutline = Instance.new("Frame")
+            ESPBoxOutline.Size = UDim2.new(0, 110, 0, 175)
+            ESPBoxOutline.Position = UDim2.new(0.5, -55, 0.5, -87)
+            ESPBoxOutline.BackgroundTransparency = 1
+            ESPBoxOutline.BorderColor3 = espBoxColor
+            ESPBoxOutline.BorderSizePixel = 2
+            ESPBoxOutline.Parent = Viewport
+        end
+    end
+
+    task.spawn(SetupLivePreview)
+
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(1)
+        SetupLivePreview()
+    end)
+
+    -- ПОКАДРОВАЯ СИНХРОНИЗАЦИЯ АНИМАЦИЙ ЖИВОГО ИГРОКА
+    RunService.RenderStepped:Connect(function()
+        if ESPPreviewFrame.Visible and MainFrame.Visible and LocalPlayer.Character then
+            local realRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if realRoot then
+                local rootCF = realRoot.CFrame
+                local rotCF = CFrame.Angles(0, currentRotation, 0)
+
+                for clonePart, realPart in pairs(partMap) do
+                    if clonePart and realPart and clonePart.Parent and realPart.Parent then
+                        local relCF = rootCF:ToObjectSpace(realPart.CFrame)
+                        clonePart.CFrame = rotCF * relCF
+                    end
+                end
+            end
+        end
+    end)
 
     Viewport.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -542,9 +561,6 @@ function Neverlose:CreateWindow(config)
             local delta = input.Position.X - lastMousePos.X
             lastMousePos = input.Position
             currentRotation = currentRotation + (delta * 0.01)
-            if PreviewModel and PreviewModel.PrimaryPart then
-                PreviewModel:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * CFrame.Angles(0, currentRotation, 0))
-            end
         end
     end)
 
@@ -961,7 +977,7 @@ function Neverlose:CreateWindow(config)
                 end)
             end
 
-            -- HSV COLOR PICKER
+            -- COLOR PICKER
             function SectionObj:CreateColorPicker(opts)
                 opts = opts or {}
                 local name = opts.Name or "Color"
