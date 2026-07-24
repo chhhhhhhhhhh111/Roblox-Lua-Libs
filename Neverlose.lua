@@ -109,7 +109,7 @@ function Neverlose:CreateWindow(config)
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = parent
 
-    -- Плавающая кнопка для мобильных
+    -- Кнопка переключения для мобильных
     local MobileToggleButton = Instance.new("TextButton")
     MobileToggleButton.Name = "MobileToggleButton"
     MobileToggleButton.Size = UDim2.new(0, 44, 0, 44)
@@ -299,7 +299,7 @@ function Neverlose:CreateWindow(config)
     UsernameLabel.BackgroundTransparency = 1
     UsernameLabel.Parent = ProfileFrame
 
-    -- Окно Информации об Аккаунте
+    -- Окно информации об аккаунте
     local SessionModal = Instance.new("Frame")
     SessionModal.Size = UDim2.new(0, 280, 0, 220)
     SessionModal.Position = UDim2.new(0.5, -140, 0.5, -110)
@@ -427,143 +427,6 @@ function Neverlose:CreateWindow(config)
     ContentArea.BackgroundTransparency = 1
     ContentArea.Parent = MainFrame
 
-    -- ESP PREVIEW ЖИВОЙ АНИМИРОВАННЫЙ ПЕРСОНАЖ
-    local ESPPreviewFrame, ViewportCamera, PreviewModel, ESPBoxOutline, WorldModel
-    local espBoxColor = Color3.fromRGB(0, 180, 255)
-
-    ESPPreviewFrame = Instance.new("Frame")
-    ESPPreviewFrame.Name = "ESPPreview"
-    ESPPreviewFrame.Size = UDim2.new(0, 210, 1, 0)
-    ESPPreviewFrame.Position = UDim2.new(1, 12, 0, 0)
-    ESPPreviewFrame.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
-    ESPPreviewFrame.Visible = false
-    ESPPreviewFrame.Parent = MainFrame
-
-    local ESPCorner = Instance.new("UICorner")
-    ESPCorner.CornerRadius = UDim.new(0, 10)
-    ESPCorner.Parent = ESPPreviewFrame
-
-    local ESPTitle = Instance.new("TextLabel")
-    ESPTitle.Size = UDim2.new(1, -20, 0, 30)
-    ESPTitle.Position = UDim2.new(0, 15, 0, 10)
-    ESPTitle.Text = "ESP PREVIEW"
-    ESPTitle.TextColor3 = Color3.fromRGB(140, 150, 175)
-    ESPTitle.Font = Enum.Font.GothamBold
-    ESPTitle.TextSize = 11
-    ESPTitle.TextXAlignment = Enum.TextXAlignment.Left
-    ESPTitle.BackgroundTransparency = 1
-    ESPTitle.Parent = ESPPreviewFrame
-
-    local Viewport = Instance.new("ViewportFrame")
-    Viewport.Size = UDim2.new(1, -20, 1, -50)
-    Viewport.Position = UDim2.new(0, 10, 0, 40)
-    Viewport.BackgroundTransparency = 1
-    Viewport.Parent = ESPPreviewFrame
-
-    ViewportCamera = Instance.new("Camera")
-    ViewportCamera.CFrame = CFrame.new(Vector3.new(0, 0, 5.5), Vector3.new(0, 0, 0))
-    Viewport.CurrentCamera = ViewportCamera
-
-    WorldModel = Instance.new("WorldModel")
-    WorldModel.Parent = Viewport
-
-    local isRotating = false
-    local lastMousePos = Vector3.new()
-    local currentRotation = 0
-
-    -- ИНИЦИАЛИЗАЦИЯ И СИНХРОНИЗАЦИЯ ДВИЖЕНИЙ В РЕАЛЬНОМ ВРЕМЕНИ
-    local partMap = {}
-
-    local function SetupLivePreview()
-        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        if not char then return end
-
-        char.Archivable = true
-        if PreviewModel then PreviewModel:Destroy() end
-        partMap = {}
-
-        PreviewModel = char:Clone()
-
-        for _, item in ipairs(PreviewModel:GetDescendants()) do
-            if item:IsA("Script") or item:IsA("LocalScript") or item:IsA("Animator") or item:IsA("Humanoid") then
-                item:Destroy()
-            end
-            if item:IsA("BasePart") then
-                item.Anchored = true
-                item.CanCollide = false
-                if item.Name ~= "HumanoidRootPart" then
-                    item.Transparency = 0
-                    item.LocalTransparencyModifier = 0
-                else
-                    item.Transparency = 1
-                end
-
-                local origPart = char:FindFirstChild(item.Name, true)
-                if origPart then
-                    partMap[item] = origPart
-                end
-            end
-        end
-
-        PreviewModel.Parent = WorldModel
-
-        if not ESPBoxOutline then
-            ESPBoxOutline = Instance.new("Frame")
-            ESPBoxOutline.Size = UDim2.new(0, 110, 0, 175)
-            ESPBoxOutline.Position = UDim2.new(0.5, -55, 0.5, -87)
-            ESPBoxOutline.BackgroundTransparency = 1
-            ESPBoxOutline.BorderColor3 = espBoxColor
-            ESPBoxOutline.BorderSizePixel = 2
-            ESPBoxOutline.Parent = Viewport
-        end
-    end
-
-    task.spawn(SetupLivePreview)
-
-    LocalPlayer.CharacterAdded:Connect(function()
-        task.wait(1)
-        SetupLivePreview()
-    end)
-
-    -- ПОКАДРОВАЯ СИНХРОНИЗАЦИЯ АНИМАЦИЙ ЖИВОГО ИГРОКА
-    RunService.RenderStepped:Connect(function()
-        if ESPPreviewFrame.Visible and MainFrame.Visible and LocalPlayer.Character then
-            local realRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if realRoot then
-                local rootCF = realRoot.CFrame
-                local rotCF = CFrame.Angles(0, currentRotation, 0)
-
-                for clonePart, realPart in pairs(partMap) do
-                    if clonePart and realPart and clonePart.Parent and realPart.Parent then
-                        local relCF = rootCF:ToObjectSpace(realPart.CFrame)
-                        clonePart.CFrame = rotCF * relCF
-                    end
-                end
-            end
-        end
-    end)
-
-    Viewport.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isRotating = true
-            lastMousePos = input.Position
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isRotating = false
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if isRotating and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position.X - lastMousePos.X
-            lastMousePos = input.Position
-            currentRotation = currentRotation + (delta * 0.01)
-        end
-    end)
-
     local WindowObj = {
         Screen = ScreenGui,
         Main = MainFrame,
@@ -584,19 +447,11 @@ function Neverlose:CreateWindow(config)
         end
     end)
 
-    function WindowObj:UpdateESPColor(color)
-        espBoxColor = color
-        if ESPBoxOutline then
-            ESPBoxOutline.BorderColor3 = color
-        end
-    end
-
     function WindowObj:CreateTab(opts)
         opts = opts or {}
         local name = opts.Name or "Tab"
         local category = opts.Category or "GENERAL"
         local icon = opts.Icon or "rbxassetid://6031280882"
-        local showPreview = opts.ShowPreview or false
 
         if not WindowObj.Categories[category] then
             local CatLabel = Instance.new("TextLabel")
@@ -683,8 +538,7 @@ function Neverlose:CreateWindow(config)
 
         local TabObj = {
             Button = TabButton,
-            Page = TabPage,
-            ShowPreview = showPreview
+            Page = TabPage
         }
 
         TabClickBtn.MouseButton1Click:Connect(function()
@@ -695,14 +549,12 @@ function Neverlose:CreateWindow(config)
             Tween(TabButton, 0.15, {BackgroundTransparency = 0})
             Tween(TabTitleLabel, 0.15, {TextColor3 = Color3.fromRGB(255, 255, 255)})
             TabPage.Visible = true
-            ESPPreviewFrame.Visible = showPreview
         end)
 
         if #WindowObj.Tabs == 0 then
             TabButton.BackgroundTransparency = 0
             TabTitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
             TabPage.Visible = true
-            ESPPreviewFrame.Visible = showPreview
         end
 
         table.insert(WindowObj.Tabs, TabObj)
