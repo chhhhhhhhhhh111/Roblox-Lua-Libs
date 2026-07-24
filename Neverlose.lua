@@ -5,10 +5,31 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
+local ScriptStartTime = tick()
 
--- Глобальная переменная для предотвращения наслоения контекстных меню
+-- Иконка перетаскивания для телефонов
+local URL_MOVE_ICON = "https://img.icons8.com/ios-glyphs/60/move.png"
+
+local function GetAsset(url, filename, fallback)
+    if getcustomasset and writefile and isfile then
+        filename = "nl_cache_" .. filename
+        if not isfile(filename) then
+            pcall(function()
+                writefile(filename, game:HttpGet(url))
+            end)
+        end
+        if isfile(filename) then
+            return getcustomasset(filename)
+        end
+    end
+    return fallback
+end
+
+local AssetMove = GetAsset(URL_MOVE_ICON, "move.png", "rbxassetid://6031094678")
+
 local ActiveContextMenu = nil
 local function CloseContextMenu()
     if ActiveContextMenu then
@@ -17,9 +38,8 @@ local function CloseContextMenu()
     end
 end
 
--- Закрытие контекстных меню при клике в свободное место
 UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         CloseContextMenu()
     end
 end)
@@ -37,6 +57,7 @@ local function Tween(obj, time, props)
     return t
 end
 
+-- Функция перетаскивания (с поддержкой Touch / Мобильных устройств)
 local function MakeDraggable(gui, handle)
     local dragging, dragInput, dragStart, startPos
     handle = handle or gui
@@ -64,7 +85,7 @@ local function MakeDraggable(gui, handle)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            Tween(gui, 0.08, {
+            Tween(gui, 0.05, {
                 Position = UDim2.new(
                     startPos.X.Scale, startPos.X.Offset + delta.X,
                     startPos.Y.Scale, startPos.Y.Offset + delta.Y
@@ -78,6 +99,7 @@ function Neverlose:CreateWindow(config)
     config = config or {}
     local windowTitle = config.Title or "Neverlose"
     local windowSubtitle = config.Subtitle or "Counter-Strike 2"
+    local toggleKey = config.ToggleKey or Enum.KeyCode.Insert
 
     local parent = GetContainer()
     if parent:FindFirstChild("NeverloseUI") then
@@ -88,6 +110,30 @@ function Neverlose:CreateWindow(config)
     ScreenGui.Name = "NeverloseUI"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = parent
+
+    -- ПЛАВАЮЩАЯ КНОПКА ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ (ОТКРЫТЬ/СКРЫТЬ МЕНЮ)
+    local MobileToggleButton = Instance.new("TextButton")
+    MobileToggleButton.Name = "MobileToggleButton"
+    MobileToggleButton.Size = UDim2.new(0, 44, 0, 44)
+    MobileToggleButton.Position = UDim2.new(0, 15, 0.5, -22)
+    MobileToggleButton.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
+    MobileToggleButton.Text = "NL"
+    MobileToggleButton.TextColor3 = Color3.fromRGB(0, 180, 255)
+    MobileToggleButton.Font = Enum.Font.GothamBold
+    MobileToggleButton.TextSize = 16
+    MobileToggleButton.ZIndex = 999
+    MobileToggleButton.Parent = ScreenGui
+
+    local MobileBtnCorner = Instance.new("UICorner")
+    MobileBtnCorner.CornerRadius = UDim.new(1, 0)
+    MobileBtnCorner.Parent = MobileToggleButton
+
+    local MobileBtnStroke = Instance.new("UIStroke")
+    MobileBtnStroke.Color = Color3.fromRGB(0, 180, 255)
+    MobileBtnStroke.Thickness = 1.5
+    MobileBtnStroke.Parent = MobileToggleButton
+
+    MakeDraggable(MobileToggleButton, MobileToggleButton)
 
     -- Главный фрейм
     local MainFrame = Instance.new("Frame")
@@ -103,6 +149,19 @@ function Neverlose:CreateWindow(config)
     MainCorner.CornerRadius = UDim.new(0, 10)
     MainCorner.Parent = MainFrame
 
+    -- Функция скрытия/показа меню
+    local function ToggleMenuVisibility()
+        MainFrame.Visible = not MainFrame.Visible
+    end
+
+    MobileToggleButton.MouseButton1Click:Connect(ToggleMenuVisibility)
+
+    UserInputService.InputBegan:Connect(function(input)
+        if input.KeyCode == toggleKey then
+            ToggleMenuVisibility()
+        end
+    end)
+
     -- Левая панель (Sidebar)
     local Sidebar = Instance.new("Frame")
     Sidebar.Name = "Sidebar"
@@ -115,7 +174,7 @@ function Neverlose:CreateWindow(config)
     SideCorner.CornerRadius = UDim.new(0, 10)
     SideCorner.Parent = Sidebar
 
-    -- ВОССАЗДАННЫЙ ЛОГОТИП NL В ТОЧНОСТИ С ФОТО 3
+    -- Логотип NL
     local LogoFrame = Instance.new("Frame")
     LogoFrame.Size = UDim2.new(1, 0, 0, 65)
     LogoFrame.BackgroundTransparency = 1
@@ -131,7 +190,6 @@ function Neverlose:CreateWindow(config)
     LogoCorner.CornerRadius = UDim.new(0, 8)
     LogoCorner.Parent = LogoBadge
 
-    -- Тень текста (Cyan)
     local LogoShadow = Instance.new("TextLabel")
     LogoShadow.Size = UDim2.new(1, 0, 1, 0)
     LogoShadow.Position = UDim2.new(0, 2, 0, 2)
@@ -142,7 +200,6 @@ function Neverlose:CreateWindow(config)
     LogoShadow.BackgroundTransparency = 1
     LogoShadow.Parent = LogoBadge
 
-    -- Белый текст
     local LogoText = Instance.new("TextLabel")
     LogoText.Size = UDim2.new(1, 0, 1, 0)
     LogoText.Text = "NL"
@@ -174,7 +231,6 @@ function Neverlose:CreateWindow(config)
     SubtitleLabel.BackgroundTransparency = 1
     SubtitleLabel.Parent = LogoFrame
 
-    -- Список вкладок
     local TabButtonContainer = Instance.new("ScrollingFrame")
     TabButtonContainer.Size = UDim2.new(1, 0, 1, -130)
     TabButtonContainer.Position = UDim2.new(0, 0, 0, 65)
@@ -192,11 +248,12 @@ function Neverlose:CreateWindow(config)
     TabPadding.PaddingRight = UDim.new(0, 10)
     TabPadding.Parent = TabButtonContainer
 
-    -- Профиль игрока
-    local ProfileFrame = Instance.new("Frame")
+    -- МИНИ-ПРОФИЛЬ
+    local ProfileFrame = Instance.new("TextButton")
     ProfileFrame.Size = UDim2.new(1, -20, 0, 50)
     ProfileFrame.Position = UDim2.new(0, 10, 1, -60)
     ProfileFrame.BackgroundColor3 = Color3.fromRGB(14, 16, 24)
+    ProfileFrame.Text = ""
     ProfileFrame.Parent = Sidebar
 
     local ProfileCorner = Instance.new("UICorner")
@@ -247,7 +304,95 @@ function Neverlose:CreateWindow(config)
     UsernameLabel.BackgroundTransparency = 1
     UsernameLabel.Parent = ProfileFrame
 
-    -- Шапка с поиском
+    -- МОДАЛЬНОЕ ОКНО ИНФОРМАЦИИ ОБ АККАУНТЕ И СЕССИИ (ПО КЛИКУ НА ПРОФИЛЬ)
+    local SessionModal = Instance.new("Frame")
+    SessionModal.Size = UDim2.new(0, 280, 0, 220)
+    SessionModal.Position = UDim2.new(0.5, -140, 0.5, -110)
+    SessionModal.BackgroundColor3 = Color3.fromRGB(14, 16, 24)
+    SessionModal.ZIndex = 500
+    SessionModal.Visible = false
+    SessionModal.Parent = MainFrame
+
+    local ModalCorner = Instance.new("UICorner")
+    ModalCorner.CornerRadius = UDim.new(0, 10)
+    ModalCorner.Parent = SessionModal
+
+    local ModalStroke = Instance.new("UIStroke")
+    ModalStroke.Color = Color3.fromRGB(0, 180, 255)
+    ModalStroke.Thickness = 1
+    ModalStroke.Parent = SessionModal
+
+    local ModalTitle = Instance.new("TextLabel")
+    ModalTitle.Size = UDim2.new(1, -20, 0, 30)
+    ModalTitle.Position = UDim2.new(0, 15, 0, 10)
+    ModalTitle.Text = "ACCOUNT & SESSION INFO"
+    ModalTitle.TextColor3 = Color3.fromRGB(0, 180, 255)
+    ModalTitle.Font = Enum.Font.GothamBold
+    ModalTitle.TextSize = 12
+    ModalTitle.TextXAlignment = Enum.TextXAlignment.Left
+    ModalTitle.ZIndex = 501
+    ModalTitle.BackgroundTransparency = 1
+    ModalTitle.Parent = SessionModal
+
+    local ModalInfoText = Instance.new("TextLabel")
+    ModalInfoText.Size = UDim2.new(1, -30, 1, -50)
+    ModalInfoText.Position = UDim2.new(0, 15, 0, 40)
+    ModalInfoText.TextColor3 = Color3.fromRGB(220, 225, 235)
+    ModalInfoText.Font = Enum.Font.GothamMedium
+    ModalInfoText.TextSize = 11
+    ModalInfoText.TextXAlignment = Enum.TextXAlignment.Left
+    ModalInfoText.TextYAlignment = Enum.TextYAlignment.Top
+    ModalInfoText.ZIndex = 501
+    ModalInfoText.BackgroundTransparency = 1
+    ModalInfoText.Parent = SessionModal
+
+    local CloseModalBtn = Instance.new("TextButton")
+    CloseModalBtn.Size = UDim2.new(0, 24, 0, 24)
+    CloseModalBtn.Position = UDim2.new(1, -30, 0, 10)
+    CloseModalBtn.Text = "X"
+    CloseModalBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+    CloseModalBtn.Font = Enum.Font.GothamBold
+    CloseModalBtn.TextSize = 12
+    CloseModalBtn.ZIndex = 502
+    CloseModalBtn.BackgroundTransparency = 1
+    CloseModalBtn.Parent = SessionModal
+
+    CloseModalBtn.MouseButton1Click:Connect(function()
+        SessionModal.Visible = false
+    end)
+
+    -- Обновление статистики в реальном времени
+    RunService.RenderStepped:Connect(function()
+        if SessionModal.Visible and LocalPlayer then
+            local sessionTime = math.floor(tick() - ScriptStartTime)
+            local mins = math.floor(sessionTime / 60)
+            local secs = sessionTime % 60
+            local fps = math.floor(workspace:GetRealPhysicsFPS())
+
+            ModalInfoText.Text = string.format(
+                "Display Name: %s\n" ..
+                "Username: @%s\n" ..
+                "User ID: %d\n" ..
+                "Account Age: %d days\n\n" ..
+                "Place ID: %d\n" ..
+                "Session Time: %02dm %02ds\n" ..
+                "Performance: %d FPS",
+                LocalPlayer.DisplayName,
+                LocalPlayer.Name,
+                LocalPlayer.UserId,
+                LocalPlayer.AccountAge,
+                game.PlaceId,
+                mins, secs,
+                fps
+            )
+        end
+    end)
+
+    ProfileFrame.MouseButton1Click:Connect(function()
+        SessionModal.Visible = not SessionModal.Visible
+    end)
+
+    -- Шапка с Поиском и Иконкой Перетаскивания для Телефонов
     local Header = Instance.new("Frame")
     Header.Size = UDim2.new(1, -185, 0, 45)
     Header.Position = UDim2.new(0, 185, 0, 0)
@@ -255,6 +400,17 @@ function Neverlose:CreateWindow(config)
     Header.Parent = MainFrame
 
     MakeDraggable(MainFrame, Header)
+
+    -- Иконка перетаскивания для мобильных телефонов (Move Icon)
+    local MoveDragIcon = Instance.new("ImageButton")
+    MoveDragIcon.Size = UDim2.new(0, 22, 0, 22)
+    MoveDragIcon.Position = UDim2.new(0, 10, 0.5, -11)
+    MoveDragIcon.BackgroundTransparency = 1
+    MoveDragIcon.Image = AssetMove
+    MoveDragIcon.ImageColor3 = Color3.fromRGB(0, 180, 255)
+    MoveDragIcon.Parent = Header
+
+    MakeDraggable(MainFrame, MoveDragIcon)
 
     local SearchBox = Instance.new("TextBox")
     SearchBox.Size = UDim2.new(0, 200, 0, 26)
@@ -278,7 +434,7 @@ function Neverlose:CreateWindow(config)
     ContentArea.BackgroundTransparency = 1
     ContentArea.Parent = MainFrame
 
-    -- ИСПРАВЛЕННЫЙ ESP PREVIEW
+    -- ESP PREVIEW ПАНЕЛЬ С ГАРАНТИРОВАННОЙ T-ПОЗОЙ
     local ESPPreviewFrame, ViewportCamera, PreviewModel, ESPBoxOutline, WorldModel
     local espBoxColor = Color3.fromRGB(0, 180, 255)
 
@@ -318,7 +474,8 @@ function Neverlose:CreateWindow(config)
     WorldModel = Instance.new("WorldModel")
     WorldModel.Parent = Viewport
 
-    local function LoadPreviewCharacter()
+    -- СОЗДАНИЕ ГАРАНТИРОВАННОЙ T-ПОЗЫ ДЛЯ ESP PREVIEW
+    local function LoadTPosePreview()
         if LocalPlayer then
             local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
             if char then
@@ -326,9 +483,22 @@ function Neverlose:CreateWindow(config)
                 if PreviewModel then PreviewModel:Destroy() end
                 PreviewModel = char:Clone()
 
-                for _, p in pairs(PreviewModel:GetDescendants()) do
-                    if p:IsA("BasePart") then
-                        p.LocalTransparencyModifier = 0
+                -- Заморозка частей тела в T-Позе
+                for _, item in ipairs(PreviewModel:GetDescendants()) do
+                    if item:IsA("Script") or item:IsA("LocalScript") or item:IsA("Animator") then
+                        item:Destroy()
+                    end
+                    if item:IsA("BasePart") then
+                        item.Anchored = true
+                        item.CanCollide = false
+                        if item.Name ~= "HumanoidRootPart" then
+                            item.Transparency = 0
+                            item.LocalTransparencyModifier = 0
+                        end
+                    end
+                    if item:IsA("Motor6D") then
+                        item.C0 = CFrame.new(item.C0.Position)
+                        item.C1 = CFrame.new(item.C1.Position)
                     end
                 end
 
@@ -348,27 +518,27 @@ function Neverlose:CreateWindow(config)
         end
     end
 
-    task.spawn(LoadPreviewCharacter)
+    task.spawn(LoadTPosePreview)
 
     local isRotating = false
     local lastMousePos = Vector3.new()
     local currentRotation = 0
 
     Viewport.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isRotating = true
             lastMousePos = input.Position
         end
     end)
 
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isRotating = false
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if isRotating and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if isRotating and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position.X - lastMousePos.X
             lastMousePos = input.Position
             currentRotation = currentRotation + (delta * 0.01)
@@ -442,7 +612,6 @@ function Neverlose:CreateWindow(config)
         TabClickBtn.Text = ""
         TabClickBtn.Parent = TabButton
 
-        -- Цветная иконка темы
         local IconImg = Instance.new("ImageLabel")
         IconImg.Size = UDim2.new(0, 16, 0, 16)
         IconImg.Position = UDim2.new(0, 10, 0.5, -8)
@@ -564,7 +733,7 @@ function Neverlose:CreateWindow(config)
 
             local SectionObj = {}
 
-            -- TOGGLE С БИНДАМИ (ИСПРАВЛЕНО НАСЛОЕНИЕ МЕНЮ)
+            -- TOGGLE
             function SectionObj:CreateToggle(opts)
                 opts = opts or {}
                 local name = opts.Name or "Toggle"
@@ -622,7 +791,6 @@ function Neverlose:CreateWindow(config)
                 SwitchBg.MouseButton1Click:Connect(function() SetToggleState(not state) end)
                 Label.MouseButton1Click:Connect(function() SetToggleState(not state) end)
 
-                -- ПКМ МЕНЮ С БЕЗОПАСНЫМ ЗАКРЫТИЕМ
                 local function OpenBindMenu()
                     CloseContextMenu()
 
@@ -774,26 +942,26 @@ function Neverlose:CreateWindow(config)
                 end
 
                 Track.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         dragging = true
                         Update(input)
                     end
                 end)
 
                 UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         dragging = false
                     end
                 end)
 
                 UserInputService.InputChanged:Connect(function(input)
-                    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                         Update(input)
                     end
                 end)
             end
 
-            -- НАСТОЯЩИЙ ПОЛНОЦЕННЫЙ HSV COLOR PICKER (КАК НА ФОТО 2!)
+            -- HSV COLOR PICKER
             function SectionObj:CreateColorPicker(opts)
                 opts = opts or {}
                 local name = opts.Name or "Color"
@@ -830,7 +998,6 @@ function Neverlose:CreateWindow(config)
                 BoxCorner.CornerRadius = UDim.new(0, 4)
                 BoxCorner.Parent = ColorBox
 
-                -- Полноценный HSV Панель окна (Как на Фото 2)
                 local PickerWindow = Instance.new("Frame")
                 PickerWindow.Size = UDim2.new(0, 180, 0, 160)
                 PickerWindow.BackgroundColor3 = Color3.fromRGB(20, 24, 35)
@@ -842,7 +1009,6 @@ function Neverlose:CreateWindow(config)
                 PCorner.CornerRadius = UDim.new(0, 8)
                 PCorner.Parent = PickerWindow
 
-                -- 1. Квадрат Насыщенности и Яркости (SV Box)
                 local SVBox = Instance.new("TextButton")
                 SVBox.Size = UDim2.new(0, 130, 0, 130)
                 SVBox.Position = UDim2.new(0, 10, 0, 15)
@@ -855,7 +1021,6 @@ function Neverlose:CreateWindow(config)
                 SVCorner.CornerRadius = UDim.new(0, 6)
                 SVCorner.Parent = SVBox
 
-                -- Градиенты для SV Box
                 local WhiteGrad = Instance.new("Frame")
                 WhiteGrad.Size = UDim2.new(1, 0, 1, 0)
                 WhiteGrad.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -878,7 +1043,6 @@ function Neverlose:CreateWindow(config)
                 BGrad.Rotation = 90
                 BGrad.Parent = BlackGrad
 
-                -- Кругляшок-селектор для SV Box (Фото 2)
                 local SVCursor = Instance.new("Frame")
                 SVCursor.Size = UDim2.new(0, 12, 0, 12)
                 SVCursor.Position = UDim2.new(s, -6, 1 - v, -6)
@@ -890,7 +1054,6 @@ function Neverlose:CreateWindow(config)
                 SVCurserCorner.CornerRadius = UDim.new(1, 0)
                 SVCurserCorner.Parent = SVCursor
 
-                -- 2. Радужная полоса Тона (Hue Slider)
                 local HueSlider = Instance.new("TextButton")
                 HueSlider.Size = UDim2.new(0, 18, 0, 130)
                 HueSlider.Position = UDim2.new(0, 150, 0, 15)
@@ -951,28 +1114,28 @@ function Neverlose:CreateWindow(config)
                 end
 
                 SVBox.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         draggingSV = true
                         UpdateSV(input)
                     end
                 end)
 
                 HueSlider.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         draggingHue = true
                         UpdateHue(input)
                     end
                 end)
 
                 UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         draggingSV = false
                         draggingHue = false
                     end
                 end)
 
                 UserInputService.InputChanged:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseMovement then
+                    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                         if draggingSV then UpdateSV(input) end
                         if draggingHue then UpdateHue(input) end
                     end
