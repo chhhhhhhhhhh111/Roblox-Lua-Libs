@@ -10,10 +10,9 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Иконки
 local URL_ARROW = "https://img.icons8.com/ios-glyphs/30/expand-arrow--v1.png"
-local URL_LOGO  = "https://ibb.co/dsycn28D"
-local URL_BIND  = "https://img.icons8.com/material-rounded/24/keyboard.png"
+local URL_DEFAULT_ICON = "https://img.icons8.com/dotty/80/crosshair.png"
 
--- Кеширование внешних ресурсов / Загрузка иконок
+-- Функция загрузки и кеширования иконок
 local function GetAsset(url, filename, fallback)
     if getcustomasset and writefile and isfile then
         filename = "nl_cache_" .. filename
@@ -30,7 +29,7 @@ local function GetAsset(url, filename, fallback)
 end
 
 local AssetArrow = GetAsset(URL_ARROW, "arrow.png", "rbxassetid://6031091004")
-local AssetBind  = GetAsset(URL_BIND, "bind.png", "rbxassetid://6031094678")
+local AssetPlaceholder = GetAsset(URL_DEFAULT_ICON, "crosshair.png", "rbxassetid://6031280882")
 
 local function GetContainer()
     local success, result = pcall(function() return CoreGui end)
@@ -114,7 +113,7 @@ function Neverlose:CreateWindow(config)
     -- Левая панель (Sidebar)
     local Sidebar = Instance.new("Frame")
     Sidebar.Name = "Sidebar"
-    Sidebar.Size = UDim2.new(0, 180, 1, 0)
+    Sidebar.Size = UDim2.new(0, 185, 1, 0)
     Sidebar.BackgroundColor3 = Color3.fromRGB(8, 9, 14)
     Sidebar.BorderSizePixel = 0
     Sidebar.Parent = MainFrame
@@ -123,29 +122,29 @@ function Neverlose:CreateWindow(config)
     SideCorner.CornerRadius = UDim.new(0, 10)
     SideCorner.Parent = Sidebar
 
-    -- Логотип NL
+    -- УВЕЛИЧЕННЫЙ И СКРУГЛЕННЫЙ ЛОГОТИП NL
     local LogoFrame = Instance.new("Frame")
-    LogoFrame.Size = UDim2.new(1, 0, 0, 60)
+    LogoFrame.Size = UDim2.new(1, 0, 0, 65)
     LogoFrame.BackgroundTransparency = 1
     LogoFrame.Parent = Sidebar
 
     local LogoBadge = Instance.new("TextLabel")
-    LogoBadge.Size = UDim2.new(0, 32, 0, 32)
-    LogoBadge.Position = UDim2.new(0, 15, 0, 14)
+    LogoBadge.Size = UDim2.new(0, 40, 0, 40)
+    LogoBadge.Position = UDim2.new(0, 12, 0, 12)
     LogoBadge.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
     LogoBadge.Text = "NL"
     LogoBadge.TextColor3 = Color3.fromRGB(255, 255, 255)
-    LogoBadge.TextSize = 14
+    LogoBadge.TextSize = 16
     LogoBadge.Font = Enum.Font.GothamBold
     LogoBadge.Parent = LogoFrame
 
     local LogoCorner = Instance.new("UICorner")
-    LogoCorner.CornerRadius = UDim.new(0, 6)
+    LogoCorner.CornerRadius = UDim.new(0, 8)
     LogoCorner.Parent = LogoBadge
 
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Size = UDim2.new(0, 110, 0, 18)
-    TitleLabel.Position = UDim2.new(0, 55, 0, 14)
+    TitleLabel.Position = UDim2.new(0, 60, 0, 15)
     TitleLabel.Text = windowTitle
     TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     TitleLabel.TextSize = 14
@@ -156,7 +155,7 @@ function Neverlose:CreateWindow(config)
 
     local SubtitleLabel = Instance.new("TextLabel")
     SubtitleLabel.Size = UDim2.new(0, 110, 0, 14)
-    SubtitleLabel.Position = UDim2.new(0, 55, 0, 32)
+    SubtitleLabel.Position = UDim2.new(0, 60, 0, 33)
     SubtitleLabel.Text = windowSubtitle
     SubtitleLabel.TextColor3 = Color3.fromRGB(110, 120, 140)
     SubtitleLabel.TextSize = 10
@@ -165,10 +164,10 @@ function Neverlose:CreateWindow(config)
     SubtitleLabel.BackgroundTransparency = 1
     SubtitleLabel.Parent = LogoFrame
 
-    -- Контейнер для списка вкладок
+    -- Список вкладок
     local TabButtonContainer = Instance.new("ScrollingFrame")
-    TabButtonContainer.Size = UDim2.new(1, 0, 1, -125)
-    TabButtonContainer.Position = UDim2.new(0, 0, 0, 60)
+    TabButtonContainer.Size = UDim2.new(1, 0, 1, -130)
+    TabButtonContainer.Position = UDim2.new(0, 0, 0, 65)
     TabButtonContainer.BackgroundTransparency = 1
     TabButtonContainer.ScrollBarThickness = 0
     TabButtonContainer.Parent = Sidebar
@@ -183,7 +182,7 @@ function Neverlose:CreateWindow(config)
     TabPadding.PaddingRight = UDim.new(0, 10)
     TabPadding.Parent = TabButtonContainer
 
-    -- Профиль пользователя
+    -- Профиль
     local ProfileFrame = Instance.new("Frame")
     ProfileFrame.Size = UDim2.new(1, -20, 0, 50)
     ProfileFrame.Position = UDim2.new(0, 10, 1, -60)
@@ -238,16 +237,15 @@ function Neverlose:CreateWindow(config)
     UsernameLabel.BackgroundTransparency = 1
     UsernameLabel.Parent = ProfileFrame
 
-    -- Шапка с поиском (БЕЗ СИСТЕМЫ КФГ)
+    -- Шапка с Поиском
     local Header = Instance.new("Frame")
-    Header.Size = UDim2.new(1, -180, 0, 45)
-    Header.Position = UDim2.new(0, 180, 0, 0)
+    Header.Size = UDim2.new(1, -185, 0, 45)
+    Header.Position = UDim2.new(0, 185, 0, 0)
     Header.BackgroundTransparency = 1
     Header.Parent = MainFrame
 
     MakeDraggable(MainFrame, Header)
 
-    -- Поисковая строка (Search)
     local SearchBox = Instance.new("TextBox")
     SearchBox.Size = UDim2.new(0, 200, 0, 26)
     SearchBox.Position = UDim2.new(1, -215, 0.5, -13)
@@ -265,12 +263,12 @@ function Neverlose:CreateWindow(config)
     SearchCorner.Parent = SearchBox
 
     local ContentArea = Instance.new("Frame")
-    ContentArea.Size = UDim2.new(1, -180, 1, -45)
-    ContentArea.Position = UDim2.new(0, 180, 0, 45)
+    ContentArea.Size = UDim2.new(1, -185, 1, -45)
+    ContentArea.Position = UDim2.new(0, 185, 0, 45)
     ContentArea.BackgroundTransparency = 1
     ContentArea.Parent = MainFrame
 
-    -- ESP PREVIEW ПАНЕЛЬ (ИСПРАВЛЕНА ПО ВЫСОТЕ И ПОРЯДКУ)
+    -- ESP PREVIEW ПАНЕЛЬ
     local ESPPreviewFrame, ViewportCamera, PreviewModel, ESPBoxOutline, WorldModel
     local espBoxColor = Color3.fromRGB(0, 145, 255)
 
@@ -304,7 +302,6 @@ function Neverlose:CreateWindow(config)
     Viewport.Parent = ESPPreviewFrame
 
     ViewportCamera = Instance.new("Camera")
-    -- Настройка высоты и фокуса камеры для полного роста
     ViewportCamera.CFrame = CFrame.new(Vector3.new(0, 3.2, 5.8), Vector3.new(0, 3.2, 0))
     Viewport.CurrentCamera = ViewportCamera
 
@@ -317,7 +314,6 @@ function Neverlose:CreateWindow(config)
             if char then
                 char.Archivable = true
                 PreviewModel = char:Clone()
-                -- Позиционирование персонажа чуть выше
                 PreviewModel:SetPrimaryPartCFrame(CFrame.new(0, 3, 0))
                 PreviewModel.Parent = WorldModel
 
@@ -332,7 +328,6 @@ function Neverlose:CreateWindow(config)
         end
     end)
 
-    -- Вращение персонажа
     local isRotating = false
     local lastMousePos = Vector3.new()
     local currentRotation = 0
@@ -370,18 +365,13 @@ function Neverlose:CreateWindow(config)
         ContentArea = ContentArea
     }
 
-    -- Система поиска по названию функций
     SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local query = string.lower(SearchBox.Text)
         for _, elem in ipairs(WindowObj.AllElements) do
             if query == "" then
                 elem.Frame.Visible = true
             else
-                if string.find(string.lower(elem.Name), query) then
-                    elem.Frame.Visible = true
-                else
-                    elem.Frame.Visible = false
-                end
+                elem.Frame.Visible = string.find(string.lower(elem.Name), query) ~= nil
             end
         end
     end)
@@ -397,7 +387,7 @@ function Neverlose:CreateWindow(config)
         opts = opts or {}
         local name = opts.Name or "Tab"
         local category = opts.Category or "GENERAL"
-        local icon = opts.Icon or ""
+        local icon = opts.Icon or AssetPlaceholder
         local showPreview = opts.ShowPreview or false
 
         if not WindowObj.Categories[category] then
@@ -430,18 +420,18 @@ function Neverlose:CreateWindow(config)
         TabClickBtn.Text = ""
         TabClickBtn.Parent = TabButton
 
-        if icon ~= "" then
-            local IconImg = Instance.new("ImageLabel")
-            IconImg.Size = UDim2.new(0, 16, 0, 16)
-            IconImg.Position = UDim2.new(0, 10, 0.5, -8)
-            IconImg.BackgroundTransparency = 1
-            IconImg.Image = icon
-            IconImg.Parent = TabButton
-        end
+        -- ЦВЕТНАЯ ИКОНКА ВКЛАДКИ
+        local IconImg = Instance.new("ImageLabel")
+        IconImg.Size = UDim2.new(0, 16, 0, 16)
+        IconImg.Position = UDim2.new(0, 10, 0.5, -8)
+        IconImg.BackgroundTransparency = 1
+        IconImg.Image = (icon:sub(1,4) == "http") and GetAsset(icon, name .. ".png", AssetPlaceholder) or icon
+        IconImg.ImageColor3 = Color3.fromRGB(0, 145, 255) -- Окрашивание в цвет темы!
+        IconImg.Parent = TabButton
 
         local TabTitleLabel = Instance.new("TextLabel")
         TabTitleLabel.Size = UDim2.new(1, -36, 1, 0)
-        TabTitleLabel.Position = UDim2.new(0, icon ~= "" and 34 or 12, 0, 0)
+        TabTitleLabel.Position = UDim2.new(0, 34, 0, 0)
         TabTitleLabel.Text = name
         TabTitleLabel.TextColor3 = Color3.fromRGB(120, 130, 150)
         TabTitleLabel.Font = Enum.Font.GothamMedium
@@ -552,12 +542,15 @@ function Neverlose:CreateWindow(config)
 
             local SectionObj = {}
 
-            -- TOGGLE
+            -- TOGGLE С БИНДАМИ ПО ПКМ (Right-Click) И РЕЖИМАМИ HOLD / TOGGLE
             function SectionObj:CreateToggle(opts)
                 opts = opts or {}
                 local name = opts.Name or "Toggle"
                 local state = opts.Default or false
                 local callback = opts.Callback or function() end
+
+                local bindKey = nil
+                local bindMode = "Toggle" -- "Hold" или "Toggle"
 
                 local ToggleFrame = Instance.new("Frame")
                 ToggleFrame.Size = UDim2.new(1, 0, 0, 24)
@@ -597,69 +590,92 @@ function Neverlose:CreateWindow(config)
                 CircleCorner.CornerRadius = UDim.new(1, 0)
                 CircleCorner.Parent = Circle
 
-                local function ToggleState()
-                    state = not state
+                local function SetToggleState(newState)
+                    state = newState
                     Tween(SwitchBg, 0.15, {BackgroundColor3 = state and Color3.fromRGB(0, 145, 255) or Color3.fromRGB(25, 30, 42)})
                     Tween(Circle, 0.15, {Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)})
                     callback(state)
                 end
 
-                SwitchBg.MouseButton1Click:Connect(ToggleState)
-                Label.MouseButton1Click:Connect(ToggleState)
-            end
+                SwitchBg.MouseButton1Click:Connect(function() SetToggleState(not state) end)
+                Label.MouseButton1Click:Connect(function() SetToggleState(not state) end)
 
-            -- KEYBIND SYSTEM
-            function SectionObj:CreateKeybind(opts)
-                opts = opts or {}
-                local name = opts.Name or "Keybind"
-                local currentKey = opts.Default or Enum.KeyCode.E
-                local callback = opts.Callback or function() end
+                -- ПКМ МЕНЮ БИНДОВ (HOLD / TOGGLE)
+                local function OpenBindMenu()
+                    local mouse = UserInputService:GetMouseLocation()
+                    local ContextMenu = Instance.new("Frame")
+                    ContextMenu.Size = UDim2.new(0, 130, 0, 65)
+                    ContextMenu.Position = UDim2.new(0, mouse.X - MainFrame.AbsolutePosition.X, 0, mouse.Y - MainFrame.AbsolutePosition.Y)
+                    ContextMenu.BackgroundColor3 = Color3.fromRGB(20, 24, 35)
+                    ContextMenu.ZIndex = 100
+                    ContextMenu.Parent = MainFrame
 
-                local BindFrame = Instance.new("Frame")
-                BindFrame.Size = UDim2.new(1, 0, 0, 24)
-                BindFrame.BackgroundTransparency = 1
-                BindFrame.Parent = ItemHolder
+                    local ContextCorner = Instance.new("UICorner")
+                    ContextCorner.CornerRadius = UDim.new(0, 6)
+                    ContextCorner.Parent = ContextMenu
 
-                table.insert(WindowObj.AllElements, { Name = name, Frame = BindFrame })
+                    local ModeBtn = Instance.new("TextButton")
+                    ModeBtn.Size = UDim2.new(1, 0, 0, 28)
+                    ModeBtn.Text = "Mode: " .. bindMode
+                    ModeBtn.TextColor3 = Color3.fromRGB(200, 210, 230)
+                    ModeBtn.Font = Enum.Font.Gotham
+                    ModeBtn.TextSize = 11
+                    ModeBtn.ZIndex = 101
+                    ModeBtn.BackgroundTransparency = 1
+                    ModeBtn.Parent = ContextMenu
 
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, -65, 1, 0)
-                Label.Text = name
-                Label.TextColor3 = Color3.fromRGB(220, 225, 235)
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = BindFrame
+                    ModeBtn.MouseButton1Click:Connect(function()
+                        bindMode = (bindMode == "Toggle") and "Hold" or "Toggle"
+                        ModeBtn.Text = "Mode: " .. bindMode
+                    end)
 
-                local BindBtn = Instance.new("TextButton")
-                BindBtn.Size = UDim2.new(0, 55, 0, 20)
-                BindBtn.Position = UDim2.new(1, -55, 0.5, -10)
-                BindBtn.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
-                BindBtn.Text = currentKey.Name
-                BindBtn.TextColor3 = Color3.fromRGB(180, 190, 210)
-                BindBtn.Font = Enum.Font.Gotham
-                BindBtn.TextSize = 11
-                BindBtn.Parent = BindFrame
-
-                local BtnCorner = Instance.new("UICorner")
-                BtnCorner.CornerRadius = UDim.new(0, 4)
-                BtnCorner.Parent = BindBtn
-
-                local listening = false
-                BindBtn.MouseButton1Click:Connect(function()
-                    listening = true
-                    BindBtn.Text = "[...]"
+                    local BindBtn = Instance.new("TextButton")
+                    BindBtn.Size = UDim2.new(1, 0, 0, 28)
+                    BindBtn.Position = UDim2.new(0, 0, 0, 28)
+                    BindBtn.Text = "Key: " .. (bindKey and bindKey.Name or "None")
                     BindBtn.TextColor3 = Color3.fromRGB(0, 145, 255)
+                    BindBtn.Font = Enum.Font.Gotham
+                    BindBtn.TextSize = 11
+                    BindBtn.ZIndex = 101
+                    BindBtn.BackgroundTransparency = 1
+                    BindBtn.Parent = ContextMenu
+
+                    local listening = false
+                    BindBtn.MouseButton1Click:Connect(function()
+                        listening = true
+                        BindBtn.Text = "Key: [...]"
+                    end)
+
+                    local bindConn
+                    bindConn = UserInputService.InputBegan:Connect(function(input)
+                        if listening and input.UserInputType == Enum.UserInputType.Keyboard then
+                            bindKey = input.KeyCode
+                            BindBtn.Text = "Key: " .. bindKey.Name
+                            listening = false
+                            bindConn:Disconnect()
+                            task.wait(0.5)
+                            ContextMenu:Destroy()
+                        end
+                    end)
+                end
+
+                Label.MouseButton2Click:Connect(OpenBindMenu)
+                SwitchBg.MouseButton2Click:Connect(OpenBindMenu)
+
+                -- ОБРАБОТКА НАЖАТИЯ КЛАВИШИ (HOLD / TOGGLE)
+                UserInputService.InputBegan:Connect(function(input)
+                    if bindKey and input.KeyCode == bindKey then
+                        if bindMode == "Toggle" then
+                            SetToggleState(not state)
+                        elseif bindMode == "Hold" then
+                            SetToggleState(true)
+                        end
+                    end
                 end)
 
-                UserInputService.InputBegan:Connect(function(input)
-                    if listening and input.UserInputType == Enum.UserInputType.Keyboard then
-                        currentKey = input.KeyCode
-                        BindBtn.Text = currentKey.Name
-                        BindBtn.TextColor3 = Color3.fromRGB(180, 190, 210)
-                        listening = false
-                        callback(currentKey)
+                UserInputService.InputEnded:Connect(function(input)
+                    if bindKey and input.KeyCode == bindKey and bindMode == "Hold" then
+                        SetToggleState(false)
                     end
                 end)
             end
@@ -751,7 +767,7 @@ function Neverlose:CreateWindow(config)
                 end)
             end
 
-            -- НАСТОЯЩИЙ COLOR PICKER (ПАЛИТРА)
+            -- ИСПРАВЛЕННЫЙ COLOR PICKER (БЕЗ ОБРЕЗАНИЯ И БАГОВ С ОТОБРАЖЕНИЕМ)
             function SectionObj:CreateColorPicker(opts)
                 opts = opts or {}
                 local name = opts.Name or "Color"
@@ -786,20 +802,18 @@ function Neverlose:CreateWindow(config)
                 BoxCorner.CornerRadius = UDim.new(0, 4)
                 BoxCorner.Parent = ColorBox
 
-                -- Полноценная всплывающая палитра выбора цвета
+                -- Палитра монтируется к MainFrame на ZIndex 100
                 local PickerWindow = Instance.new("Frame")
-                PickerWindow.Size = UDim2.new(0, 140, 0, 100)
-                PickerWindow.Position = UDim2.new(1, 5, 0, 0)
+                PickerWindow.Size = UDim2.new(0, 140, 0, 90)
                 PickerWindow.BackgroundColor3 = Color3.fromRGB(20, 24, 35)
-                PickerWindow.ZIndex = 50
+                PickerWindow.ZIndex = 100
                 PickerWindow.Visible = false
-                PickerWindow.Parent = ColorBox
+                PickerWindow.Parent = MainFrame
 
                 local PCorner = Instance.new("UICorner")
                 PCorner.CornerRadius = UDim.new(0, 6)
                 PCorner.Parent = PickerWindow
 
-                -- Пресеты цветов
                 local Palette = {
                     Color3.fromRGB(0, 145, 255),
                     Color3.fromRGB(255, 50, 50),
@@ -823,7 +837,7 @@ function Neverlose:CreateWindow(config)
                     local CBtn = Instance.new("TextButton")
                     CBtn.BackgroundColor3 = c
                     CBtn.Text = ""
-                    CBtn.ZIndex = 51
+                    CBtn.ZIndex = 101
                     CBtn.Parent = PickerWindow
 
                     local CBtnCorner = Instance.new("UICorner")
@@ -839,11 +853,17 @@ function Neverlose:CreateWindow(config)
                 end
 
                 ColorBox.MouseButton1Click:Connect(function()
-                    PickerWindow.Visible = not PickerWindow.Visible
+                    if not PickerWindow.Visible then
+                        local mouse = UserInputService:GetMouseLocation()
+                        PickerWindow.Position = UDim2.new(0, mouse.X - MainFrame.AbsolutePosition.X - 140, 0, mouse.Y - MainFrame.AbsolutePosition.Y)
+                        PickerWindow.Visible = true
+                    else
+                        PickerWindow.Visible = false
+                    end
                 end)
             end
 
-            -- DROPDOWN (С АНИМИРОВАННОЙ СТРЕЛОЧКОЙ ИЗ ИКОНОК)
+            -- DROPDOWN
             function SectionObj:CreateDropdown(opts)
                 opts = opts or {}
                 local name = opts.Name or "Dropdown"
@@ -885,7 +905,6 @@ function Neverlose:CreateWindow(config)
                 BoxCorner.CornerRadius = UDim.new(0, 5)
                 BoxCorner.Parent = Box
 
-                -- Анимированная Иконка Стрелочки из ссылки
                 local ArrowIcon = Instance.new("ImageLabel")
                 ArrowIcon.Size = UDim2.new(0, 14, 0, 14)
                 ArrowIcon.Position = UDim2.new(1, -20, 0.5, -7)
@@ -929,7 +948,7 @@ function Neverlose:CreateWindow(config)
                         Container.Visible = false
                         DropFrame.ZIndex = 5
                         open = false
-                        Tween(ArrowIcon, 0.2, {Rotation = 0}) -- Анимация закрытия
+                        Tween(ArrowIcon, 0.2, {Rotation = 0})
                         callback(selected)
                     end)
                 end
@@ -938,7 +957,7 @@ function Neverlose:CreateWindow(config)
                     open = not open
                     Container.Visible = open
                     DropFrame.ZIndex = open and 50 or 5
-                    Tween(ArrowIcon, 0.2, {Rotation = open and 180 or 0}) -- Плавный поворот стрелочки!
+                    Tween(ArrowIcon, 0.2, {Rotation = open and 180 or 0})
                 end)
             end
 
