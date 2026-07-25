@@ -109,7 +109,6 @@ function Neverlose:CreateWindow(config)
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = parent
 
-    -- Кнопка переключения для мобильных
     local MobileToggleButton = Instance.new("TextButton")
     MobileToggleButton.Name = "MobileToggleButton"
     MobileToggleButton.Size = UDim2.new(0, 44, 0, 44)
@@ -608,9 +607,6 @@ function Neverlose:CreateWindow(config)
                 local state = opts.Default or false
                 local callback = opts.Callback or function() end
 
-                local bindKey = nil
-                local bindMode = "Toggle"
-
                 local ToggleFrame = Instance.new("Frame")
                 ToggleFrame.Size = UDim2.new(1, 0, 0, 24)
                 ToggleFrame.BackgroundTransparency = 1
@@ -679,7 +675,7 @@ function Neverlose:CreateWindow(config)
 
                     local ModeBtn = Instance.new("TextButton")
                     ModeBtn.Size = UDim2.new(1, 0, 0, 32)
-                    ModeBtn.Text = "Mode: " .. bindMode
+                    ModeBtn.Text = "Mode: Toggle"
                     ModeBtn.TextColor3 = Color3.fromRGB(220, 225, 235)
                     ModeBtn.Font = Enum.Font.GothamMedium
                     ModeBtn.TextSize = 11
@@ -687,15 +683,10 @@ function Neverlose:CreateWindow(config)
                     ModeBtn.BackgroundTransparency = 1
                     ModeBtn.Parent = ContextMenu
 
-                    ModeBtn.MouseButton1Click:Connect(function()
-                        bindMode = (bindMode == "Toggle") and "Hold" or "Toggle"
-                        ModeBtn.Text = "Mode: " .. bindMode
-                    end)
-
                     local BindBtn = Instance.new("TextButton")
                     BindBtn.Size = UDim2.new(1, 0, 0, 32)
                     BindBtn.Position = UDim2.new(0, 0, 0, 32)
-                    BindBtn.Text = "Key: " .. (bindKey and bindKey.Name or "None")
+                    BindBtn.Text = "Key: None"
                     BindBtn.TextColor3 = Color3.fromRGB(0, 180, 255)
                     BindBtn.Font = Enum.Font.GothamMedium
                     BindBtn.TextSize = 11
@@ -712,8 +703,8 @@ function Neverlose:CreateWindow(config)
                     local bindConn
                     bindConn = UserInputService.InputBegan:Connect(function(input)
                         if listening and input.UserInputType == Enum.UserInputType.Keyboard then
-                            bindKey = input.KeyCode
-                            BindBtn.Text = "Key: " .. bindKey.Name
+                            local key = input.KeyCode
+                            BindBtn.Text = "Key: " .. key.Name
                             listening = false
                             bindConn:Disconnect()
                             task.wait(0.2)
@@ -724,22 +715,6 @@ function Neverlose:CreateWindow(config)
 
                 Label.MouseButton2Click:Connect(OpenBindMenu)
                 SwitchBg.MouseButton2Click:Connect(OpenBindMenu)
-
-                UserInputService.InputBegan:Connect(function(input)
-                    if bindKey and input.KeyCode == bindKey then
-                        if bindMode == "Toggle" then
-                            SetToggleState(not state)
-                        elseif bindMode == "Hold" then
-                            SetToggleState(true)
-                        end
-                    end
-                end)
-
-                UserInputService.InputEnded:Connect(function(input)
-                    if bindKey and input.KeyCode == bindKey and bindMode == "Hold" then
-                        SetToggleState(false)
-                    end
-                end)
             end
 
             -- SLIDER
@@ -1208,6 +1183,142 @@ function Neverlose:CreateWindow(config)
                     Tween(Btn, 0.15, {BackgroundColor3 = Color3.fromRGB(22, 26, 38)})
                     callback()
                 end)
+            end
+
+            -- TEXTBOX
+            function SectionObj:CreateTextbox(opts)
+                opts = opts or {}
+                local name = opts.Name or "Textbox"
+                local defaultText = opts.Default or ""
+                local placeholder = opts.Placeholder or ""
+                local callback = opts.Callback or function() end
+
+                local TextFrame = Instance.new("Frame")
+                TextFrame.Size = UDim2.new(1, 0, 0, 36)
+                TextFrame.BackgroundTransparency = 1
+                TextFrame.Parent = ItemHolder
+
+                table.insert(WindowObj.AllElements, { Name = name, Frame = TextFrame })
+
+                local Label = Instance.new("TextLabel")
+                Label.Size = UDim2.new(1, 0, 0, 16)
+                Label.Text = name
+                Label.TextColor3 = Color3.fromRGB(220, 225, 235)
+                Label.Font = Enum.Font.GothamMedium
+                Label.TextSize = 12
+                Label.TextXAlignment = Enum.TextXAlignment.Left
+                Label.BackgroundTransparency = 1
+                Label.Parent = TextFrame
+
+                local Box = Instance.new("TextBox")
+                Box.Size = UDim2.new(1, 0, 0, 18)
+                Box.Position = UDim2.new(0, 0, 0, 18)
+                Box.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
+                Box.Text = defaultText
+                Box.PlaceholderText = placeholder
+                Box.PlaceholderColor3 = Color3.fromRGB(120, 130, 150)
+                Box.TextColor3 = Color3.fromRGB(220, 225, 235)
+                Box.Font = Enum.Font.Gotham
+                Box.TextSize = 12
+                Box.Parent = TextFrame
+
+                local BoxCorner = Instance.new("UICorner")
+                BoxCorner.CornerRadius = UDim.new(0, 4)
+                BoxCorner.Parent = Box
+
+                Box:GetPropertyChangedSignal("Text"):Connect(function()
+                    callback(Box.Text)
+                end)
+            end
+
+            -- LISTBOX
+            function SectionObj:CreateListbox(opts)
+                opts = opts or {}
+                local name = opts.Name or "Listbox"
+                local options = opts.Options or {}
+                local default = opts.Default
+                local callback = opts.Callback or function() end
+
+                local ListFrame = Instance.new("Frame")
+                ListFrame.Size = UDim2.new(1, 0, 0, 0)
+                ListFrame.AutomaticSize = Enum.AutomaticSize.Y
+                ListFrame.BackgroundTransparency = 1
+                ListFrame.Parent = ItemHolder
+
+                table.insert(WindowObj.AllElements, { Name = name, Frame = ListFrame })
+
+                local Label = Instance.new("TextLabel")
+                Label.Size = UDim2.new(1, 0, 0, 16)
+                Label.Text = name
+                Label.TextColor3 = Color3.fromRGB(220, 225, 235)
+                Label.Font = Enum.Font.GothamMedium
+                Label.TextSize = 12
+                Label.TextXAlignment = Enum.TextXAlignment.Left
+                Label.BackgroundTransparency = 1
+                Label.Parent = ListFrame
+
+                local Scroll = Instance.new("ScrollingFrame")
+                Scroll.Size = UDim2.new(1, 0, 0, 100)
+                Scroll.Position = UDim2.new(0, 0, 0, 20)
+                Scroll.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
+                Scroll.BorderSizePixel = 0
+                Scroll.ScrollBarThickness = 4
+                Scroll.Parent = ListFrame
+
+                local ScrollCorner = Instance.new("UICorner")
+                ScrollCorner.CornerRadius = UDim.new(0, 5)
+                ScrollCorner.Parent = Scroll
+
+                local Layout = Instance.new("UIListLayout")
+                Layout.SortOrder = Enum.SortOrder.LayoutOrder
+                Layout.Parent = Scroll
+
+                local selected = default or options[1]
+                local buttons = {}
+
+                local function SetSelected(newSel)
+                    selected = newSel
+                    for _, btn in ipairs(buttons) do
+                        btn.BackgroundColor3 = btn.Text == selected and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(25, 30, 42)
+                    end
+                    callback(selected)
+                end
+
+                local function RefreshOptions(newOptions)
+                    for _, btn in ipairs(buttons) do btn:Destroy() end
+                    buttons = {}
+                    for i, opt in ipairs(newOptions) do
+                        local Btn = Instance.new("TextButton")
+                        Btn.Size = UDim2.new(1, -4, 0, 22)
+                        Btn.Position = UDim2.new(0, 2, 0, (i-1)*22)
+                        Btn.BackgroundColor3 = opt == selected and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(25, 30, 42)
+                        Btn.Text = opt
+                        Btn.TextColor3 = Color3.fromRGB(220, 225, 235)
+                        Btn.Font = Enum.Font.Gotham
+                        Btn.TextSize = 11
+                        Btn.Parent = Scroll
+
+                        local BtnCorner = Instance.new("UICorner")
+                        BtnCorner.CornerRadius = UDim.new(0, 4)
+                        BtnCorner.Parent = Btn
+
+                        Btn.MouseButton1Click:Connect(function()
+                            SetSelected(opt)
+                        end)
+
+                        table.insert(buttons, Btn)
+                    end
+                    Scroll.CanvasSize = UDim2.new(0,0,0,#newOptions*22)
+                end
+
+                RefreshOptions(options)
+
+                local obj = {
+                    SetOptions = function(newOpts) RefreshOptions(newOpts) end,
+                    SetSelected = function(opt) SetSelected(opt) end,
+                    GetSelected = function() return selected end,
+                }
+                return obj
             end
 
             return SectionObj
