@@ -167,7 +167,6 @@ function Neverlose:CreateWindow(config)
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = parent
 
-    -- Кнопка для мобильных
     local MobileToggleButton = Instance.new("TextButton")
     MobileToggleButton.Name = "MobileToggleButton"
     MobileToggleButton.Size = UDim2.new(0, 44, 0, 44)
@@ -187,7 +186,6 @@ function Neverlose:CreateWindow(config)
 
     MakeDraggable(MobileToggleButton, MobileToggleButton)
 
-    -- Главный фрейм UI
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Size = UDim2.new(0, 780, 0, 520)
@@ -210,7 +208,6 @@ function Neverlose:CreateWindow(config)
         end
     end)
 
-    -- Сайдбар
     local Sidebar = Instance.new("Frame")
     Sidebar.Name = "Sidebar"
     Sidebar.Size = UDim2.new(0, 200, 1, 0)
@@ -246,7 +243,6 @@ function Neverlose:CreateWindow(config)
     TabPadding.PaddingRight = UDim.new(0, 10)
     TabPadding.Parent = TabButtonContainer
 
-    -- Профиль пользователя
     local ProfileFrame = Instance.new("Frame")
     ProfileFrame.Size = UDim2.new(1, -20, 0, 48)
     ProfileFrame.Position = UDim2.new(0, 10, 1, -55)
@@ -293,7 +289,6 @@ function Neverlose:CreateWindow(config)
     TillLabel.Parent = ProfileFrame
     Neverlose:RegisterAccent(TillLabel, "TextColor3")
 
-    -- Шапка
     local Header = Instance.new("Frame")
     Header.Size = UDim2.new(1, -200, 0, 45)
     Header.Position = UDim2.new(0, 200, 0, 0)
@@ -508,7 +503,7 @@ function Neverlose:CreateWindow(config)
 
             local SectionObj = {}
 
-            -- 1. TOGGLE
+            -- TOGGLE
             function SectionObj:CreateToggle(opts)
                 opts = opts or {}
                 local name = opts.Name or "Toggle"
@@ -516,6 +511,7 @@ function Neverlose:CreateWindow(config)
                 local callback = opts.Callback or function() end
                 local hasColor = opts.HasColor or false
                 local colorDefault = opts.ColorDefault or Neverlose.AccentColor
+                local colorCallback = opts.ColorCallback or function() end
 
                 local ToggleFrame = Instance.new("Frame")
                 ToggleFrame.Size = UDim2.new(1, 0, 0, 24)
@@ -586,7 +582,7 @@ function Neverlose:CreateWindow(config)
                 end
             end
 
-            -- 2. SLIDER
+            -- SLIDER
             function SectionObj:CreateSlider(opts)
                 opts = opts or {}
                 local name = opts.Name or "Slider"
@@ -694,7 +690,7 @@ function Neverlose:CreateWindow(config)
                 end)
             end
 
-            -- 3. DROPDOWN
+            -- DROPDOWN
             function SectionObj:CreateDropdown(opts)
                 opts = opts or {}
                 local name = opts.Name or "Dropdown"
@@ -788,7 +784,7 @@ function Neverlose:CreateWindow(config)
                 end)
             end
 
-            -- 4. COLOR PICKER
+            -- COLOR PICKER
             function SectionObj:CreateColorPicker(opts)
                 opts = opts or {}
                 local name = opts.Name or "Color"
@@ -825,6 +821,37 @@ function Neverlose:CreateWindow(config)
 
                 ColorBox.MouseButton1Click:Connect(function()
                     callback(currentColor)
+                end)
+            end
+
+            -- BUTTON
+            function SectionObj:CreateButton(opts)
+                opts = opts or {}
+                local name = opts.Name or "Button"
+                local callback = opts.Callback or function() end
+
+                local BtnFrame = Instance.new("Frame")
+                BtnFrame.Size = UDim2.new(1, 0, 0, 26)
+                BtnFrame.BackgroundTransparency = 1
+                BtnFrame.Parent = ItemHolder
+
+                table.insert(WindowObj.AllElements, { Name = name, Frame = BtnFrame })
+
+                local Btn = Instance.new("TextButton")
+                Btn.Size = UDim2.new(1, 0, 1, 0)
+                Btn.Text = name
+                Btn.Font = Enum.Font.GothamMedium
+                Btn.TextSize = 11
+                Btn.Parent = BtnFrame
+                Neverlose:RegisterTheme(Btn, "BackgroundColor3", "ElementBg")
+                Neverlose:RegisterTheme(Btn, "TextColor3", "TextColor")
+
+                local BtnCorner = Instance.new("UICorner")
+                BtnCorner.CornerRadius = UDim.new(0, 4)
+                BtnCorner.Parent = Btn
+
+                Btn.MouseButton1Click:Connect(function()
+                    callback()
                 end)
             end
 
