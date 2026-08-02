@@ -777,7 +777,7 @@ function Neverlose:CreateWindow(config)
                 end)
             end
 
-            -- ИНТЕРАКТИВНЫЙ COLOR PICKER (С открывающейся палитрой HSV)
+            -- ИНТЕРАКТИВНЫЙ COLOR PICKER
             function SectionObj:CreateColorPicker(opts)
                 opts = opts or {}
                 local name = opts.Name or "Color"
@@ -814,7 +814,6 @@ function Neverlose:CreateWindow(config)
                 BoxCorner.CornerRadius = UDim.new(0, 4)
                 BoxCorner.Parent = ColorBox
 
-                -- Всплывающее окно палитры
                 local PickerWin = Instance.new("Frame")
                 PickerWin.Size = UDim2.new(0, 180, 0, 150)
                 PickerWin.ZIndex = 500
@@ -831,7 +830,6 @@ function Neverlose:CreateWindow(config)
                 PStroke.Parent = PickerWin
                 Neverlose:RegisterTheme(PStroke, "Color", "BorderColor")
 
-                -- SV Canvas
                 local SVBox = Instance.new("TextButton")
                 SVBox.Size = UDim2.new(0, 130, 0, 120)
                 SVBox.Position = UDim2.new(0, 10, 0, 15)
@@ -872,7 +870,6 @@ function Neverlose:CreateWindow(config)
                 SVCurserCorner.CornerRadius = UDim.new(1, 0)
                 SVCurserCorner.Parent = SVCursor
 
-                -- Hue Bar
                 local HueSlider = Instance.new("TextButton")
                 HueSlider.Size = UDim2.new(0, 18, 0, 120)
                 HueSlider.Position = UDim2.new(0, 150, 0, 15)
@@ -942,7 +939,7 @@ function Neverlose:CreateWindow(config)
                 end)
             end
 
-            -- KEYBIND (Поддержка клавиш и кнопок мыши)
+            -- KEYBIND
             function SectionObj:CreateKeybind(opts)
                 opts = opts or {}
                 local name = opts.Name or "Keybind"
@@ -967,9 +964,7 @@ function Neverlose:CreateWindow(config)
                 Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
 
                 local function GetKeyName(key)
-                    if typeof(key) == "EnumItem" then
-                        return key.Name
-                    end
+                    if typeof(key) == "EnumItem" then return key.Name end
                     return tostring(key)
                 end
 
@@ -1004,9 +999,6 @@ function Neverlose:CreateWindow(config)
                             listening = false
                         elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
                             currentKey = Enum.UserInputType.MouseButton2
-                            listening = false
-                        elseif input.UserInputType == Enum.UserInputType.MouseButton3 then
-                            currentKey = Enum.UserInputType.MouseButton3
                             listening = false
                         end
 
