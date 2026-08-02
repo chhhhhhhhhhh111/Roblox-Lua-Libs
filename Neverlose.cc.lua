@@ -5,12 +5,9 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Иконки
 Neverlose.Icons = {
     Checkmark = "https://img.icons8.com/ios-glyphs/30/checkmark--v1.png",
     Color = "https://img.icons8.com/ios-glyphs/30/paint-palette--v1.png",
@@ -19,35 +16,34 @@ Neverlose.Icons = {
     ChevronDown = "https://img.icons8.com/ios-glyphs/30/chevron-down.png"
 }
 
--- Цветовые темы (с учётом прозрачности для Glassmorphism)
 Neverlose.Themes = {
     Dark = {
         MainBg = Color3.fromRGB(10, 12, 18),
-        MainTransparency = 0.2,
+        MainTransparency = 0.25,
         SidebarBg = Color3.fromRGB(6, 7, 12),
-        SidebarTransparency = 0.3,
+        SidebarTransparency = 0.35,
         CardBg = Color3.fromRGB(15, 18, 26),
-        CardTransparency = 0.35,
+        CardTransparency = 0.4,
         ElementBg = Color3.fromRGB(22, 26, 38),
-        ElementTransparency = 0.2,
-        TextColor = Color3.fromRGB(230, 235, 245),
+        ElementTransparency = 0.3,
+        TextColor = Color3.fromRGB(235, 240, 250),
         SubTextColor = Color3.fromRGB(120, 130, 150),
         BorderColor = Color3.fromRGB(255, 255, 255),
         BorderTransparency = 0.93
     },
     Light = {
         MainBg = Color3.fromRGB(240, 242, 248),
-        MainTransparency = 0.15,
+        MainTransparency = 0.2,
         SidebarBg = Color3.fromRGB(225, 228, 238),
-        SidebarTransparency = 0.2,
+        SidebarTransparency = 0.25,
         CardBg = Color3.fromRGB(255, 255, 255),
-        CardTransparency = 0.4,
+        CardTransparency = 0.45,
         ElementBg = Color3.fromRGB(230, 235, 245),
-        ElementTransparency = 0.3,
+        ElementTransparency = 0.35,
         TextColor = Color3.fromRGB(20, 25, 35),
         SubTextColor = Color3.fromRGB(100, 110, 125),
         BorderColor = Color3.fromRGB(0, 0, 0),
-        BorderTransparency = 0.92
+        BorderTransparency = 0.9
     }
 }
 
@@ -171,21 +167,10 @@ function Neverlose:CreateWindow(config)
     local windowTitle = config.Title or "Neverlose"
     local windowSubtitle = config.Subtitle or "Counter-Strike 2"
     local toggleKey = config.ToggleKey or Enum.KeyCode.Insert
-    local enableBlur = config.Blur ~= false
 
     local parent = GetContainer()
     if parent:FindFirstChild("NeverloseUI") then
         parent.NeverloseUI:Destroy()
-    end
-
-    -- Эффект Размытия (Blur Effect в Lighting)
-    local BlurEffect = Lighting:FindFirstChild("NeverloseBlur")
-    if not BlurEffect then
-        BlurEffect = Instance.new("BlurEffect")
-        BlurEffect.Name = "NeverloseBlur"
-        BlurEffect.Size = 0
-        BlurEffect.Enabled = true
-        BlurEffect.Parent = Lighting
     end
 
     local ScreenGui = Instance.new("ScreenGui")
@@ -193,7 +178,7 @@ function Neverlose:CreateWindow(config)
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = parent
 
-    -- Кнопка для мобильных устройств
+    -- Кнопка открытия на мобильных
     local MobileToggleButton = Instance.new("TextButton")
     MobileToggleButton.Name = "MobileToggleButton"
     MobileToggleButton.Size = UDim2.new(0, 44, 0, 44)
@@ -218,7 +203,7 @@ function Neverlose:CreateWindow(config)
 
     MakeDraggable(MobileToggleButton, MobileToggleButton)
 
-    -- Главный фрейм UI с прозрачностью (Glassmorphism)
+    -- Главное окно
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Size = UDim2.new(0, 760, 0, 530)
@@ -240,13 +225,6 @@ function Neverlose:CreateWindow(config)
 
     local function ToggleMenuVisibility()
         MainFrame.Visible = not MainFrame.Visible
-        if enableBlur then
-            Tween(BlurEffect, 0.3, { Size = MainFrame.Visible and 18 or 0 })
-        end
-    end
-
-    if enableBlur then
-        BlurEffect.Size = 18
     end
 
     MobileToggleButton.MouseButton1Click:Connect(ToggleMenuVisibility)
@@ -332,7 +310,7 @@ function Neverlose:CreateWindow(config)
     TabPadding.PaddingRight = UDim.new(0, 10)
     TabPadding.Parent = TabButtonContainer
 
-    -- Profile Card
+    -- Profile Frame
     local ProfileFrame = Instance.new("Frame")
     ProfileFrame.Size = UDim2.new(1, -20, 0, 50)
     ProfileFrame.Position = UDim2.new(0, 10, 1, -60)
@@ -435,6 +413,813 @@ function Neverlose:CreateWindow(config)
             end
         end
     end)
+
+    -- Вспомогательная функция построения элементов управления для секций и дочерних окон
+    local function AttachItemCreators(targetHolder, elementTracker)
+        local Creators = {}
+
+        -- 1. TOGGLE (с поддержкой 3 точек "..." и отдельного перетаскиваемого окна)
+        function Creators:CreateToggle(opts)
+            opts = opts or {}
+            local name = opts.Name or "Toggle"
+            local state = opts.Default or false
+            local callback = opts.Callback or function() end
+            local hasColor = opts.HasColor or false
+            local colorDefault = opts.ColorDefault or Neverlose.AccentColor
+            local colorCallback = opts.ColorCallback or function() end
+            local subWindowBuilder = opts.SubWindow
+
+            local ToggleFrame = Instance.new("Frame")
+            ToggleFrame.Size = UDim2.new(1, 0, 0, 24)
+            ToggleFrame.BackgroundTransparency = 1
+            ToggleFrame.Parent = targetHolder
+
+            if elementTracker then
+                table.insert(elementTracker, { Name = name, Frame = ToggleFrame })
+            end
+
+            local offsetRight = -40
+            if subWindowBuilder then offsetRight = offsetRight - 28 end
+            if hasColor then offsetRight = offsetRight - 24 end
+
+            local Label = Instance.new("TextButton")
+            Label.Size = UDim2.new(1, offsetRight, 1, 0)
+            Label.Text = name
+            Label.Font = Enum.Font.GothamMedium
+            Label.TextSize = 12
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.BackgroundTransparency = 1
+            Label.Parent = ToggleFrame
+            Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
+
+            local SwitchBg = Instance.new("TextButton")
+            SwitchBg.Size = UDim2.new(0, 34, 0, 18)
+            SwitchBg.Position = UDim2.new(1, -34, 0.5, -9)
+            SwitchBg.Text = ""
+            SwitchBg.Parent = ToggleFrame
+            Neverlose:RegisterTheme(SwitchBg, "BackgroundColor3", "ElementBg", "ElementTransparency")
+
+            local SwitchCorner = Instance.new("UICorner")
+            SwitchCorner.CornerRadius = UDim.new(1, 0)
+            SwitchCorner.Parent = SwitchBg
+
+            local Circle = Instance.new("Frame")
+            Circle.Size = UDim2.new(0, 14, 0, 14)
+            Circle.Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+            Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Circle.Parent = SwitchBg
+
+            local CircleCorner = Instance.new("UICorner")
+            CircleCorner.CornerRadius = UDim.new(1, 0)
+            CircleCorner.Parent = Circle
+
+            local function SetToggleState(newState)
+                state = newState
+                if state then
+                    Tween(SwitchBg, 0.15, {BackgroundColor3 = Neverlose.AccentColor, BackgroundTransparency = 0})
+                else
+                    local theme = Neverlose.Themes[Neverlose.CurrentTheme]
+                    Tween(SwitchBg, 0.15, {BackgroundColor3 = theme.ElementBg, BackgroundTransparency = theme.ElementTransparency})
+                end
+                Tween(Circle, 0.15, {Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)})
+                callback(state)
+            end
+
+            if state then SetToggleState(true) end
+
+            SwitchBg.MouseButton1Click:Connect(function() SetToggleState(not state) end)
+            Label.MouseButton1Click:Connect(function() SetToggleState(not state) end)
+
+            -- Встроенный ColorPicker в toggle
+            if hasColor then
+                local ColorBtn = Instance.new("TextButton")
+                ColorBtn.Size = UDim2.new(0, 18, 0, 12)
+                ColorBtn.Position = UDim2.new(1, subWindowBuilder and -84 or -58, 0.5, -6)
+                ColorBtn.BackgroundColor3 = colorDefault
+                ColorBtn.Text = ""
+                ColorBtn.Parent = ToggleFrame
+
+                local CBCorner = Instance.new("UICorner")
+                CBCorner.CornerRadius = UDim.new(0, 4)
+                CBCorner.Parent = ColorBtn
+            end
+
+            -- 3 точки "..." и создание независимого перетаскиваемого дочернего окна!
+            if subWindowBuilder then
+                local DotsBtn = Instance.new("TextButton")
+                DotsBtn.Size = UDim2.new(0, 22, 0, 18)
+                DotsBtn.Position = UDim2.new(1, -60, 0.5, -9)
+                DotsBtn.Text = "•••"
+                DotsBtn.Font = Enum.Font.GothamBold
+                DotsBtn.TextSize = 10
+                DotsBtn.Parent = ToggleFrame
+                Neverlose:RegisterTheme(DotsBtn, "TextColor3", "SubTextColor")
+                Neverlose:RegisterTheme(DotsBtn, "BackgroundColor3", "ElementBg", "ElementTransparency")
+
+                local DotsCorner = Instance.new("UICorner")
+                DotsCorner.CornerRadius = UDim.new(0, 4)
+                DotsCorner.Parent = DotsBtn
+
+                -- Создание плавающего дочернего окна (Sub-Window Card)
+                local SubWinFrame = Instance.new("Frame")
+                SubWinFrame.Name = "SubWindow_" .. name
+                SubWinFrame.Size = UDim2.new(0, 220, 0, 0)
+                SubWinFrame.Position = UDim2.new(0.5, 50, 0.3, 0)
+                SubWinFrame.AutomaticSize = Enum.AutomaticSize.Y
+                SubWinFrame.Visible = false
+                SubWinFrame.ZIndex = 500
+                SubWinFrame.Parent = ScreenGui
+
+                Neverlose:RegisterTheme(SubWinFrame, "BackgroundColor3", "CardBg", "CardTransparency")
+
+                local SubWinCorner = Instance.new("UICorner")
+                SubWinCorner.CornerRadius = UDim.new(0, 10)
+                SubWinCorner.Parent = SubWinFrame
+
+                local SubWinStroke = Instance.new("UIStroke")
+                SubWinStroke.Thickness = 1
+                SubWinStroke.Parent = SubWinFrame
+                Neverlose:RegisterTheme(SubWinStroke, "Color", "BorderColor", "BorderTransparency")
+
+                -- Заголовок дочернего окна
+                local SubWinHeader = Instance.new("Frame")
+                SubWinHeader.Size = UDim2.new(1, 0, 0, 28)
+                SubWinHeader.BackgroundTransparency = 1
+                SubWinHeader.Parent = SubWinFrame
+
+                local SubWinTitle = Instance.new("TextLabel")
+                SubWinTitle.Size = UDim2.new(1, -30, 1, 0)
+                SubWinTitle.Position = UDim2.new(0, 10, 0, 0)
+                SubWinTitle.Text = string.upper(opts.SubWindowTitle or name)
+                SubWinTitle.Font = Enum.Font.GothamBold
+                SubWinTitle.TextSize = 10
+                SubWinTitle.TextXAlignment = Enum.TextXAlignment.Left
+                SubWinTitle.BackgroundTransparency = 1
+                SubWinTitle.Parent = SubWinHeader
+                Neverlose:RegisterTheme(SubWinTitle, "TextColor3", "SubTextColor")
+
+                local CloseSubBtn = Instance.new("TextButton")
+                CloseSubBtn.Size = UDim2.new(0, 20, 0, 20)
+                CloseSubBtn.Position = UDim2.new(1, -24, 0.5, -10)
+                CloseSubBtn.Text = "✕"
+                CloseSubBtn.Font = Enum.Font.GothamBold
+                CloseSubBtn.TextSize = 11
+                CloseSubBtn.BackgroundTransparency = 1
+                CloseSubBtn.Parent = SubWinHeader
+                Neverlose:RegisterTheme(CloseSubBtn, "TextColor3", "SubTextColor")
+
+                local SubItemHolder = Instance.new("Frame")
+                SubItemHolder.Size = UDim2.new(1, -16, 0, 0)
+                SubItemHolder.Position = UDim2.new(0, 8, 0, 30)
+                SubItemHolder.AutomaticSize = Enum.AutomaticSize.Y
+                SubItemHolder.BackgroundTransparency = 1
+                SubItemHolder.Parent = SubWinFrame
+
+                local SubLayout = Instance.new("UIListLayout")
+                SubLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                SubLayout.Padding = UDim.new(0, 6)
+                SubLayout.Parent = SubItemHolder
+
+                local SubPadding = Instance.new("UIPadding")
+                SubPadding.PaddingBottom = UDim.new(0, 10)
+                SubPadding.Parent = SubItemHolder
+
+                -- Делаем дочернее окно перетаскиваемым!
+                MakeDraggable(SubWinFrame, SubWinHeader)
+
+                CloseSubBtn.MouseButton1Click:Connect(function()
+                    SubWinFrame.Visible = false
+                end)
+
+                DotsBtn.MouseButton1Click:Connect(function()
+                    SubWinFrame.Visible = not SubWinFrame.Visible
+                end)
+
+                -- Заполняем элементы внутри дочернего окна
+                local SubCreators = AttachItemCreators(SubItemHolder, elementTracker)
+                subWindowBuilder(SubCreators)
+            end
+        end
+
+        -- 2. SLIDER
+        function Creators:CreateSlider(opts)
+            opts = opts or {}
+            local name = opts.Name or "Slider"
+            local min = opts.Min or 0
+            local max = opts.Max or 100
+            local val = opts.Default or min
+            local suffix = opts.Suffix or ""
+            local callback = opts.Callback or function() end
+
+            local SliderFrame = Instance.new("Frame")
+            SliderFrame.Size = UDim2.new(1, 0, 0, 36)
+            SliderFrame.BackgroundTransparency = 1
+            SliderFrame.Parent = targetHolder
+
+            if elementTracker then table.insert(elementTracker, { Name = name, Frame = SliderFrame }) end
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(0.6, 0, 0, 16)
+            Label.Text = name
+            Label.Font = Enum.Font.GothamMedium
+            Label.TextSize = 12
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.BackgroundTransparency = 1
+            Label.Parent = SliderFrame
+            Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
+
+            local ValLabel = Instance.new("TextLabel")
+            ValLabel.Size = UDim2.new(0.4, 0, 0, 16)
+            ValLabel.Position = UDim2.new(0.6, 0, 0, 0)
+            ValLabel.Text = tostring(val) .. suffix
+            ValLabel.Font = Enum.Font.Gotham
+            ValLabel.TextSize = 11
+            ValLabel.TextXAlignment = Enum.TextXAlignment.Right
+            ValLabel.BackgroundTransparency = 1
+            ValLabel.Parent = SliderFrame
+            Neverlose:RegisterTheme(ValLabel, "TextColor3", "SubTextColor")
+
+            local Track = Instance.new("TextButton")
+            Track.Size = UDim2.new(1, 0, 0, 5)
+            Track.Position = UDim2.new(0, 0, 0, 23)
+            Track.Text = ""
+            Track.Parent = SliderFrame
+            Neverlose:RegisterTheme(Track, "BackgroundColor3", "ElementBg", "ElementTransparency")
+
+            local TrackCorner = Instance.new("UICorner")
+            TrackCorner.CornerRadius = UDim.new(1, 0)
+            TrackCorner.Parent = Track
+
+            local Fill = Instance.new("Frame")
+            Fill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
+            Fill.Parent = Track
+            Neverlose:RegisterAccent(Fill, "BackgroundColor3")
+
+            local FillCorner = Instance.new("UICorner")
+            FillCorner.CornerRadius = UDim.new(1, 0)
+            FillCorner.Parent = Fill
+
+            local Thumb = Instance.new("Frame")
+            Thumb.Size = UDim2.new(0, 10, 0, 10)
+            Thumb.Position = UDim2.new(1, -5, 0.5, -5)
+            Thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Thumb.Parent = Fill
+
+            local ThumbCorner = Instance.new("UICorner")
+            ThumbCorner.CornerRadius = UDim.new(1, 0)
+            ThumbCorner.Parent = Thumb
+
+            local dragging = false
+            local function Update(input)
+                local percent = math.clamp((input.Position.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
+                val = math.floor(min + (max - min) * percent)
+                ValLabel.Text = tostring(val) .. suffix
+                Tween(Fill, 0.05, {Size = UDim2.new(percent, 0, 1, 0)})
+                callback(val)
+            end
+
+            Track.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true Update(input)
+                end
+            end)
+
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = false
+                end
+            end)
+
+            UserInputService.InputChanged:Connect(function(input)
+                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    Update(input)
+                end
+            end)
+        end
+
+        -- 3. DROPDOWN
+        function Creators:CreateDropdown(opts)
+            opts = opts or {}
+            local name = opts.Name or "Dropdown"
+            local options = opts.Options or {}
+            local selected = opts.Default or options[1] or "None"
+            local callback = opts.Callback or function() end
+
+            local DropFrame = Instance.new("Frame")
+            DropFrame.Size = UDim2.new(1, 0, 0, 44)
+            DropFrame.BackgroundTransparency = 1
+            DropFrame.ZIndex = 5
+            DropFrame.Parent = targetHolder
+
+            if elementTracker then table.insert(elementTracker, { Name = name, Frame = DropFrame }) end
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, 0, 0, 16)
+            Label.Text = name
+            Label.Font = Enum.Font.GothamMedium
+            Label.TextSize = 12
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.BackgroundTransparency = 1
+            Label.Parent = DropFrame
+            Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
+
+            local Box = Instance.new("TextButton")
+            Box.Size = UDim2.new(1, 0, 0, 24)
+            Box.Position = UDim2.new(0, 0, 0, 20)
+            Box.Text = "  " .. selected
+            Box.Font = Enum.Font.Gotham
+            Box.TextSize = 11
+            Box.TextXAlignment = Enum.TextXAlignment.Left
+            Box.ZIndex = 6
+            Box.Parent = DropFrame
+            Neverlose:RegisterTheme(Box, "BackgroundColor3", "ElementBg", "ElementTransparency")
+            Neverlose:RegisterTheme(Box, "TextColor3", "TextColor")
+
+            local BoxCorner = Instance.new("UICorner")
+            BoxCorner.CornerRadius = UDim.new(0, 6)
+            BoxCorner.Parent = Box
+
+            local ArrowIcon = Instance.new("ImageLabel")
+            ArrowIcon.Size = UDim2.new(0, 12, 0, 12)
+            ArrowIcon.Position = UDim2.new(1, -20, 0.5, -6)
+            ArrowIcon.BackgroundTransparency = 1
+            ArrowIcon.Image = GetAsset(Neverlose.Icons.ChevronDown, "chevron.png")
+            ArrowIcon.ZIndex = 7
+            ArrowIcon.Parent = Box
+            Neverlose:RegisterAccent(ArrowIcon, "ImageColor3")
+
+            local Container = Instance.new("Frame")
+            Container.Size = UDim2.new(1, 0, 0, #options * 24)
+            Container.Position = UDim2.new(0, 0, 1, 4)
+            Container.Visible = false
+            Container.ZIndex = 30
+            Container.Parent = Box
+            Neverlose:RegisterTheme(Container, "BackgroundColor3", "CardBg")
+
+            local CCorner = Instance.new("UICorner")
+            CCorner.CornerRadius = UDim.new(0, 6)
+            CCorner.Parent = Container
+
+            local CStroke = Instance.new("UIStroke")
+            CStroke.Thickness = 1
+            CStroke.Parent = Container
+            Neverlose:RegisterTheme(CStroke, "Color", "BorderColor", "BorderTransparency")
+
+            local CLayout = Instance.new("UIListLayout")
+            CLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            CLayout.Parent = Container
+
+            local open = false
+            for _, opt in ipairs(options) do
+                local OptBtn = Instance.new("TextButton")
+                OptBtn.Size = UDim2.new(1, 0, 0, 24)
+                OptBtn.BackgroundTransparency = 1
+                OptBtn.Text = "  " .. opt
+                OptBtn.Font = Enum.Font.Gotham
+                OptBtn.TextSize = 11
+                OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+                OptBtn.ZIndex = 31
+                OptBtn.Parent = Container
+                Neverlose:RegisterTheme(OptBtn, "TextColor3", "SubTextColor")
+
+                OptBtn.MouseButton1Click:Connect(function()
+                    selected = opt
+                    Box.Text = "  " .. selected
+                    Container.Visible = false
+                    open = false
+                    Tween(ArrowIcon, 0.2, {Rotation = 0})
+                    callback(selected)
+                end)
+            end
+
+            Box.MouseButton1Click:Connect(function()
+                open = not open
+                Container.Visible = open
+                Tween(ArrowIcon, 0.2, {Rotation = open and 180 or 0})
+            end)
+        end
+
+        -- 4. MULTI-DROPDOWN
+        function Creators:CreateMultiDropdown(opts)
+            opts = opts or {}
+            local name = opts.Name or "Multi Dropdown"
+            local options = opts.Options or {}
+            local selected = opts.Default or {}
+            local callback = opts.Callback or function() end
+
+            local DropFrame = Instance.new("Frame")
+            DropFrame.Size = UDim2.new(1, 0, 0, 44)
+            DropFrame.BackgroundTransparency = 1
+            DropFrame.ZIndex = 5
+            DropFrame.Parent = targetHolder
+
+            if elementTracker then table.insert(elementTracker, { Name = name, Frame = DropFrame }) end
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, 0, 0, 16)
+            Label.Text = name
+            Label.Font = Enum.Font.GothamMedium
+            Label.TextSize = 12
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.BackgroundTransparency = 1
+            Label.Parent = DropFrame
+            Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
+
+            local selectedSet = {}
+            for _, item in ipairs(selected) do selectedSet[item] = true end
+
+            local function GetFormattedText()
+                local list = {}
+                for opt, act in pairs(selectedSet) do
+                    if act then table.insert(list, opt) end
+                end
+                if #list == 0 then return "None" end
+                return table.concat(list, ", ")
+            end
+
+            local Box = Instance.new("TextButton")
+            Box.Size = UDim2.new(1, 0, 0, 24)
+            Box.Position = UDim2.new(0, 0, 0, 20)
+            Box.Text = "  " .. GetFormattedText()
+            Box.Font = Enum.Font.Gotham
+            Box.TextSize = 11
+            Box.TextXAlignment = Enum.TextXAlignment.Left
+            Box.TextTruncate = Enum.TextTruncate.AtEnd
+            Box.ZIndex = 6
+            Box.Parent = DropFrame
+            Neverlose:RegisterTheme(Box, "BackgroundColor3", "ElementBg", "ElementTransparency")
+            Neverlose:RegisterTheme(Box, "TextColor3", "TextColor")
+
+            local BoxCorner = Instance.new("UICorner")
+            BoxCorner.CornerRadius = UDim.new(0, 6)
+            BoxCorner.Parent = Box
+
+            local ArrowIcon = Instance.new("ImageLabel")
+            ArrowIcon.Size = UDim2.new(0, 12, 0, 12)
+            ArrowIcon.Position = UDim2.new(1, -20, 0.5, -6)
+            ArrowIcon.BackgroundTransparency = 1
+            ArrowIcon.Image = GetAsset(Neverlose.Icons.ChevronDown, "chevron.png")
+            ArrowIcon.ZIndex = 7
+            ArrowIcon.Parent = Box
+            Neverlose:RegisterAccent(ArrowIcon, "ImageColor3")
+
+            local Container = Instance.new("Frame")
+            Container.Size = UDim2.new(1, 0, 0, #options * 24)
+            Container.Position = UDim2.new(0, 0, 1, 4)
+            Container.Visible = false
+            Container.ZIndex = 30
+            Container.Parent = Box
+            Neverlose:RegisterTheme(Container, "BackgroundColor3", "CardBg")
+
+            local CCorner = Instance.new("UICorner")
+            CCorner.CornerRadius = UDim.new(0, 6)
+            CCorner.Parent = Container
+
+            local CLayout = Instance.new("UIListLayout")
+            CLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            CLayout.Parent = Container
+
+            local open = false
+            for _, opt in ipairs(options) do
+                local OptBtn = Instance.new("TextButton")
+                OptBtn.Size = UDim2.new(1, 0, 0, 24)
+                OptBtn.BackgroundTransparency = 1
+                OptBtn.Text = (selectedSet[opt] and "  ✓ " or "    ") .. opt
+                OptBtn.Font = Enum.Font.Gotham
+                OptBtn.TextSize = 11
+                OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+                OptBtn.ZIndex = 31
+                OptBtn.Parent = Container
+                if selectedSet[opt] then
+                    Neverlose:RegisterAccent(OptBtn, "TextColor3")
+                else
+                    Neverlose:RegisterTheme(OptBtn, "TextColor3", "SubTextColor")
+                end
+
+                OptBtn.MouseButton1Click:Connect(function()
+                    selectedSet[opt] = not selectedSet[opt]
+                    OptBtn.Text = (selectedSet[opt] and "  ✓ " or "    ") .. opt
+                    if selectedSet[opt] then
+                        OptBtn.TextColor3 = Neverlose.AccentColor
+                    else
+                        local theme = Neverlose.Themes[Neverlose.CurrentTheme]
+                        OptBtn.TextColor3 = theme.SubTextColor
+                    end
+                    Box.Text = "  " .. GetFormattedText()
+                    callback(selectedSet)
+                end)
+            end
+
+            Box.MouseButton1Click:Connect(function()
+                open = not open
+                Container.Visible = open
+                Tween(ArrowIcon, 0.2, {Rotation = open and 180 or 0})
+            end)
+        end
+
+        -- 5. COLOR PICKER
+        function Creators:CreateColorPicker(opts)
+            opts = opts or {}
+            local name = opts.Name or "Color"
+            local currentColor = opts.Default or Neverlose.AccentColor
+            local callback = opts.Callback or function() end
+
+            local h, s, v = Color3.toHSV(currentColor)
+
+            local ColorFrame = Instance.new("Frame")
+            ColorFrame.Size = UDim2.new(1, 0, 0, 24)
+            ColorFrame.BackgroundTransparency = 1
+            ColorFrame.Parent = targetHolder
+
+            if elementTracker then table.insert(elementTracker, { Name = name, Frame = ColorFrame }) end
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, -30, 1, 0)
+            Label.Text = name
+            Label.Font = Enum.Font.GothamMedium
+            Label.TextSize = 12
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.BackgroundTransparency = 1
+            Label.Parent = ColorFrame
+            Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
+
+            local ColorBox = Instance.new("TextButton")
+            ColorBox.Size = UDim2.new(0, 22, 0, 14)
+            ColorBox.Position = UDim2.new(1, -22, 0.5, -7)
+            ColorBox.BackgroundColor3 = currentColor
+            ColorBox.Text = ""
+            ColorBox.Parent = ColorFrame
+
+            local BoxCorner = Instance.new("UICorner")
+            BoxCorner.CornerRadius = UDim.new(0, 4)
+            BoxCorner.Parent = ColorBox
+
+            local PickerWindow = Instance.new("Frame")
+            PickerWindow.Size = UDim2.new(0, 180, 0, 160)
+            PickerWindow.ZIndex = 200
+            PickerWindow.Visible = false
+            PickerWindow.Parent = ScreenGui
+            Neverlose:RegisterTheme(PickerWindow, "BackgroundColor3", "CardBg")
+
+            local PCorner = Instance.new("UICorner")
+            PCorner.CornerRadius = UDim.new(0, 8)
+            PCorner.Parent = PickerWindow
+
+            local PStroke = Instance.new("UIStroke")
+            PStroke.Thickness = 1
+            PStroke.Parent = PickerWindow
+            Neverlose:RegisterTheme(PStroke, "Color", "BorderColor", "BorderTransparency")
+
+            local SVBox = Instance.new("TextButton")
+            SVBox.Size = UDim2.new(0, 130, 0, 130)
+            SVBox.Position = UDim2.new(0, 10, 0, 15)
+            SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+            SVBox.Text = ""
+            SVBox.ZIndex = 201
+            SVBox.Parent = PickerWindow
+
+            local WhiteGrad = Instance.new("Frame")
+            WhiteGrad.Size = UDim2.new(1, 0, 1, 0)
+            WhiteGrad.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            WhiteGrad.ZIndex = 202
+            WhiteGrad.Parent = SVBox
+
+            local WGrad = Instance.new("UIGradient")
+            WGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)})
+            WGrad.Parent = WhiteGrad
+
+            local BlackGrad = Instance.new("Frame")
+            BlackGrad.Size = UDim2.new(1, 0, 1, 0)
+            BlackGrad.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            BlackGrad.ZIndex = 203
+            BlackGrad.Parent = SVBox
+
+            local BGrad = Instance.new("UIGradient")
+            BGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)})
+            BGrad.Rotation = 90
+            BGrad.Parent = BlackGrad
+
+            local SVCursor = Instance.new("Frame")
+            SVCursor.Size = UDim2.new(0, 10, 0, 10)
+            SVCursor.Position = UDim2.new(s, -5, 1 - v, -5)
+            SVCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            SVCursor.ZIndex = 205
+            SVCursor.Parent = SVBox
+
+            local SVCurserCorner = Instance.new("UICorner")
+            SVCurserCorner.CornerRadius = UDim.new(1, 0)
+            SVCurserCorner.Parent = SVCursor
+
+            local HueSlider = Instance.new("TextButton")
+            HueSlider.Size = UDim2.new(0, 18, 0, 130)
+            HueSlider.Position = UDim2.new(0, 150, 0, 15)
+            HueSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            HueSlider.Text = ""
+            HueSlider.ZIndex = 201
+            HueSlider.Parent = PickerWindow
+
+            local HueGradient = Instance.new("UIGradient")
+            HueGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+                ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+                ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+                ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+            })
+            HueGradient.Rotation = 90
+            HueGradient.Parent = HueSlider
+
+            local draggingSV, draggingHue = false, false
+
+            local function UpdateColor()
+                currentColor = Color3.fromHSV(h, s, v)
+                SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                ColorBox.BackgroundColor3 = currentColor
+                callback(currentColor)
+            end
+
+            local function UpdateSV(input)
+                s = math.clamp((input.Position.X - SVBox.AbsolutePosition.X) / SVBox.AbsoluteSize.X, 0, 1)
+                v = 1 - math.clamp((input.Position.Y - SVBox.AbsolutePosition.Y) / SVBox.AbsoluteSize.Y, 0, 1)
+                SVCursor.Position = UDim2.new(s, -5, 1 - v, -5)
+                UpdateColor()
+            end
+
+            local function UpdateHue(input)
+                h = math.clamp((input.Position.Y - HueSlider.AbsolutePosition.Y) / HueSlider.AbsoluteSize.Y, 0, 1)
+                UpdateColor()
+            end
+
+            SVBox.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSV = true UpdateSV(input) end
+            end)
+            HueSlider.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingHue = true UpdateHue(input) end
+            end)
+
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSV = false draggingHue = false end
+            end)
+
+            UserInputService.InputChanged:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseMovement then
+                    if draggingSV then UpdateSV(input) end
+                    if draggingHue then UpdateHue(input) end
+                end
+            end)
+
+            ColorBox.MouseButton1Click:Connect(function()
+                PickerWindow.Visible = not PickerWindow.Visible
+                if PickerWindow.Visible then
+                    local mouse = UserInputService:GetMouseLocation()
+                    PickerWindow.Position = UDim2.new(0, mouse.X - 90, 0, mouse.Y)
+                end
+            end)
+        end
+
+        -- 6. KEYBIND
+        function Creators:CreateKeybind(opts)
+            opts = opts or {}
+            local name = opts.Name or "Keybind"
+            local currentKey = opts.Default or Enum.KeyCode.E
+            local callback = opts.Callback or function() end
+
+            local BindFrame = Instance.new("Frame")
+            BindFrame.Size = UDim2.new(1, 0, 0, 24)
+            BindFrame.BackgroundTransparency = 1
+            BindFrame.Parent = targetHolder
+
+            if elementTracker then table.insert(elementTracker, { Name = name, Frame = BindFrame }) end
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, -60, 1, 0)
+            Label.Text = name
+            Label.Font = Enum.Font.GothamMedium
+            Label.TextSize = 12
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.BackgroundTransparency = 1
+            Label.Parent = BindFrame
+            Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
+
+            local BindBtn = Instance.new("TextButton")
+            BindBtn.Size = UDim2.new(0, 50, 0, 20)
+            BindBtn.Position = UDim2.new(1, -50, 0.5, -10)
+            BindBtn.Text = currentKey.Name
+            BindBtn.Font = Enum.Font.Gotham
+            BindBtn.TextSize = 10
+            BindBtn.Parent = BindFrame
+            Neverlose:RegisterTheme(BindBtn, "BackgroundColor3", "ElementBg", "ElementTransparency")
+            Neverlose:RegisterTheme(BindBtn, "TextColor3", "SubTextColor")
+
+            local BtnCorner = Instance.new("UICorner")
+            BtnCorner.CornerRadius = UDim.new(0, 4)
+            BtnCorner.Parent = BindBtn
+
+            local listening = false
+            BindBtn.MouseButton1Click:Connect(function()
+                listening = true
+                BindBtn.Text = "..."
+                Neverlose:RegisterAccent(BindBtn, "TextColor3")
+            end)
+
+            UserInputService.InputBegan:Connect(function(input)
+                if listening and input.UserInputType == Enum.UserInputType.Keyboard then
+                    currentKey = input.KeyCode
+                    BindBtn.Text = currentKey.Name
+                    listening = false
+                    local theme = Neverlose.Themes[Neverlose.CurrentTheme]
+                    BindBtn.TextColor3 = theme.SubTextColor
+                    callback(currentKey)
+                end
+            end)
+        end
+
+        -- 7. TEXTBOX
+        function Creators:CreateTextbox(opts)
+            opts = opts or {}
+            local name = opts.Name or "Textbox"
+            local defaultText = opts.Default or ""
+            local placeholder = opts.Placeholder or "Type..."
+            local callback = opts.Callback or function() end
+
+            local TextFrame = Instance.new("Frame")
+            TextFrame.Size = UDim2.new(1, 0, 0, 42)
+            TextFrame.BackgroundTransparency = 1
+            TextFrame.Parent = targetHolder
+
+            if elementTracker then table.insert(elementTracker, { Name = name, Frame = TextFrame }) end
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, 0, 0, 16)
+            Label.Text = name
+            Label.Font = Enum.Font.GothamMedium
+            Label.TextSize = 12
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.BackgroundTransparency = 1
+            Label.Parent = TextFrame
+            Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
+
+            local Box = Instance.new("TextBox")
+            Box.Size = UDim2.new(1, 0, 0, 22)
+            Box.Position = UDim2.new(0, 0, 0, 20)
+            Box.Text = defaultText
+            Box.PlaceholderText = placeholder
+            Box.Font = Enum.Font.Gotham
+            Box.TextSize = 11
+            Box.Parent = TextFrame
+
+            Neverlose:RegisterTheme(Box, "BackgroundColor3", "ElementBg", "ElementTransparency")
+            Neverlose:RegisterTheme(Box, "TextColor3", "TextColor")
+            Neverlose:RegisterTheme(Box, "PlaceholderColor3", "SubTextColor")
+
+            local BoxCorner = Instance.new("UICorner")
+            BoxCorner.CornerRadius = UDim.new(0, 5)
+            BoxCorner.Parent = Box
+
+            Box:GetPropertyChangedSignal("Text"):Connect(function()
+                callback(Box.Text)
+            end)
+        end
+
+        -- 8. BUTTON
+        function Creators:CreateButton(opts)
+            opts = opts or {}
+            local name = opts.Name or "Button"
+            local callback = opts.Callback or function() end
+
+            local BtnFrame = Instance.new("Frame")
+            BtnFrame.Size = UDim2.new(1, 0, 0, 28)
+            BtnFrame.BackgroundTransparency = 1
+            BtnFrame.Parent = targetHolder
+
+            if elementTracker then table.insert(elementTracker, { Name = name, Frame = BtnFrame }) end
+
+            local Btn = Instance.new("TextButton")
+            Btn.Size = UDim2.new(1, 0, 1, 0)
+            Btn.Text = name
+            Btn.Font = Enum.Font.GothamMedium
+            Btn.TextSize = 12
+            Btn.Parent = BtnFrame
+            Neverlose:RegisterTheme(Btn, "BackgroundColor3", "ElementBg", "ElementTransparency")
+            Neverlose:RegisterTheme(Btn, "TextColor3", "TextColor")
+
+            local BtnCorner = Instance.new("UICorner")
+            BtnCorner.CornerRadius = UDim.new(0, 5)
+            BtnCorner.Parent = Btn
+
+            Btn.MouseButton1Click:Connect(function()
+                Tween(Btn, 0.08, {BackgroundColor3 = Neverlose.AccentColor, BackgroundTransparency = 0})
+                task.wait(0.08)
+                local theme = Neverlose.Themes[Neverlose.CurrentTheme]
+                Tween(Btn, 0.15, {BackgroundColor3 = theme.ElementBg, BackgroundTransparency = theme.ElementTransparency})
+                callback()
+            end)
+        end
+
+        return Creators
+    end
 
     function WindowObj:CreateTab(opts)
         opts = opts or {}
@@ -588,785 +1373,7 @@ function Neverlose:CreateWindow(config)
             HolderPadding.PaddingBottom = UDim.new(0, 10)
             HolderPadding.Parent = ItemHolder
 
-            local SectionObj = {}
-
-            -- 1. TOGGLE (с опциональным инлайн ColorPicker)
-            function SectionObj:CreateToggle(opts)
-                opts = opts or {}
-                local name = opts.Name or "Toggle"
-                local state = opts.Default or false
-                local callback = opts.Callback or function() end
-                local hasColor = opts.HasColor or false
-                local colorDefault = opts.ColorDefault or Neverlose.AccentColor
-                local colorCallback = opts.ColorCallback or function() end
-
-                local ToggleFrame = Instance.new("Frame")
-                ToggleFrame.Size = UDim2.new(1, 0, 0, 24)
-                ToggleFrame.BackgroundTransparency = 1
-                ToggleFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = ToggleFrame })
-
-                local Label = Instance.new("TextButton")
-                Label.Size = UDim2.new(1, hasColor and -70 or -45, 1, 0)
-                Label.Text = name
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = ToggleFrame
-                Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
-
-                local SwitchBg = Instance.new("TextButton")
-                SwitchBg.Size = UDim2.new(0, 34, 0, 18)
-                SwitchBg.Position = UDim2.new(1, -34, 0.5, -9)
-                SwitchBg.Text = ""
-                SwitchBg.Parent = ToggleFrame
-                Neverlose:RegisterTheme(SwitchBg, "BackgroundColor3", "ElementBg", "ElementTransparency")
-
-                local SwitchCorner = Instance.new("UICorner")
-                SwitchCorner.CornerRadius = UDim.new(1, 0)
-                SwitchCorner.Parent = SwitchBg
-
-                local Circle = Instance.new("Frame")
-                Circle.Size = UDim2.new(0, 14, 0, 14)
-                Circle.Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
-                Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Circle.Parent = SwitchBg
-
-                local CircleCorner = Instance.new("UICorner")
-                CircleCorner.CornerRadius = UDim.new(1, 0)
-                CircleCorner.Parent = Circle
-
-                local function SetToggleState(newState)
-                    state = newState
-                    if state then
-                        Tween(SwitchBg, 0.15, {BackgroundColor3 = Neverlose.AccentColor, BackgroundTransparency = 0})
-                    else
-                        local theme = Neverlose.Themes[Neverlose.CurrentTheme]
-                        Tween(SwitchBg, 0.15, {BackgroundColor3 = theme.ElementBg, BackgroundTransparency = theme.ElementTransparency})
-                    end
-                    Tween(Circle, 0.15, {Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)})
-                    callback(state)
-                end
-
-                if state then SetToggleState(true) end
-
-                SwitchBg.MouseButton1Click:Connect(function() SetToggleState(not state) end)
-                Label.MouseButton1Click:Connect(function() SetToggleState(not state) end)
-
-                -- Инлайн ColorPicker
-                if hasColor then
-                    local ColorBtn = Instance.new("TextButton")
-                    ColorBtn.Size = UDim2.new(0, 18, 0, 12)
-                    ColorBtn.Position = UDim2.new(1, -60, 0.5, -6)
-                    ColorBtn.BackgroundColor3 = colorDefault
-                    ColorBtn.Text = ""
-                    ColorBtn.Parent = ToggleFrame
-
-                    local CBCorner = Instance.new("UICorner")
-                    CBCorner.CornerRadius = UDim.new(0, 4)
-                    CBCorner.Parent = ColorBtn
-                end
-            end
-
-            -- 2. SLIDER
-            function SectionObj:CreateSlider(opts)
-                opts = opts or {}
-                local name = opts.Name or "Slider"
-                local min = opts.Min or 0
-                local max = opts.Max or 100
-                local val = opts.Default or min
-                local suffix = opts.Suffix or ""
-                local callback = opts.Callback or function() end
-
-                local SliderFrame = Instance.new("Frame")
-                SliderFrame.Size = UDim2.new(1, 0, 0, 36)
-                SliderFrame.BackgroundTransparency = 1
-                SliderFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = SliderFrame })
-
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(0.6, 0, 0, 16)
-                Label.Text = name
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = SliderFrame
-                Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
-
-                local ValLabel = Instance.new("TextLabel")
-                ValLabel.Size = UDim2.new(0.4, 0, 0, 16)
-                ValLabel.Position = UDim2.new(0.6, 0, 0, 0)
-                ValLabel.Text = tostring(val) .. suffix
-                ValLabel.Font = Enum.Font.Gotham
-                ValLabel.TextSize = 11
-                ValLabel.TextXAlignment = Enum.TextXAlignment.Right
-                ValLabel.BackgroundTransparency = 1
-                ValLabel.Parent = SliderFrame
-                Neverlose:RegisterTheme(ValLabel, "TextColor3", "SubTextColor")
-
-                local Track = Instance.new("TextButton")
-                Track.Size = UDim2.new(1, 0, 0, 5)
-                Track.Position = UDim2.new(0, 0, 0, 23)
-                Track.Text = ""
-                Track.Parent = SliderFrame
-                Neverlose:RegisterTheme(Track, "BackgroundColor3", "ElementBg", "ElementTransparency")
-
-                local TrackCorner = Instance.new("UICorner")
-                TrackCorner.CornerRadius = UDim.new(1, 0)
-                TrackCorner.Parent = Track
-
-                local Fill = Instance.new("Frame")
-                Fill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
-                Fill.Parent = Track
-                Neverlose:RegisterAccent(Fill, "BackgroundColor3")
-
-                local FillCorner = Instance.new("UICorner")
-                FillCorner.CornerRadius = UDim.new(1, 0)
-                FillCorner.Parent = Fill
-
-                local Thumb = Instance.new("Frame")
-                Thumb.Size = UDim2.new(0, 10, 0, 10)
-                Thumb.Position = UDim2.new(1, -5, 0.5, -5)
-                Thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Thumb.Parent = Fill
-
-                local ThumbCorner = Instance.new("UICorner")
-                ThumbCorner.CornerRadius = UDim.new(1, 0)
-                ThumbCorner.Parent = Thumb
-
-                local dragging = false
-                local function Update(input)
-                    local percent = math.clamp((input.Position.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
-                    val = math.floor(min + (max - min) * percent)
-                    ValLabel.Text = tostring(val) .. suffix
-                    Tween(Fill, 0.05, {Size = UDim2.new(percent, 0, 1, 0)})
-                    callback(val)
-                end
-
-                Track.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        dragging = true
-                        Update(input)
-                    end
-                end)
-
-                UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        dragging = false
-                    end
-                end)
-
-                UserInputService.InputChanged:Connect(function(input)
-                    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        Update(input)
-                    end
-                end)
-            end
-
-            -- 3. DROPDOWN (Одиночный выбор)
-            function SectionObj:CreateDropdown(opts)
-                opts = opts or {}
-                local name = opts.Name or "Dropdown"
-                local options = opts.Options or {}
-                local selected = opts.Default or options[1] or "None"
-                local callback = opts.Callback or function() end
-
-                local DropFrame = Instance.new("Frame")
-                DropFrame.Size = UDim2.new(1, 0, 0, 44)
-                DropFrame.BackgroundTransparency = 1
-                DropFrame.ZIndex = 5
-                DropFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = DropFrame })
-
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, 0, 0, 16)
-                Label.Text = name
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = DropFrame
-                Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
-
-                local Box = Instance.new("TextButton")
-                Box.Size = UDim2.new(1, 0, 0, 24)
-                Box.Position = UDim2.new(0, 0, 0, 20)
-                Box.Text = "  " .. selected
-                Box.Font = Enum.Font.Gotham
-                Box.TextSize = 11
-                Box.TextXAlignment = Enum.TextXAlignment.Left
-                Box.ZIndex = 6
-                Box.Parent = DropFrame
-                Neverlose:RegisterTheme(Box, "BackgroundColor3", "ElementBg", "ElementTransparency")
-                Neverlose:RegisterTheme(Box, "TextColor3", "TextColor")
-
-                local BoxCorner = Instance.new("UICorner")
-                BoxCorner.CornerRadius = UDim.new(0, 6)
-                BoxCorner.Parent = Box
-
-                local ArrowIcon = Instance.new("ImageLabel")
-                ArrowIcon.Size = UDim2.new(0, 12, 0, 12)
-                ArrowIcon.Position = UDim2.new(1, -20, 0.5, -6)
-                ArrowIcon.BackgroundTransparency = 1
-                ArrowIcon.Image = GetAsset(Neverlose.Icons.ChevronDown, "chevron.png")
-                ArrowIcon.ZIndex = 7
-                ArrowIcon.Parent = Box
-                Neverlose:RegisterAccent(ArrowIcon, "ImageColor3")
-
-                local Container = Instance.new("Frame")
-                Container.Size = UDim2.new(1, 0, 0, #options * 24)
-                Container.Position = UDim2.new(0, 0, 1, 4)
-                Container.Visible = false
-                Container.ZIndex = 30
-                Container.Parent = Box
-                Neverlose:RegisterTheme(Container, "BackgroundColor3", "CardBg")
-
-                local CCorner = Instance.new("UICorner")
-                CCorner.CornerRadius = UDim.new(0, 6)
-                CCorner.Parent = Container
-
-                local CStroke = Instance.new("UIStroke")
-                CStroke.Thickness = 1
-                CStroke.Parent = Container
-                Neverlose:RegisterTheme(CStroke, "Color", "BorderColor", "BorderTransparency")
-
-                local CLayout = Instance.new("UIListLayout")
-                CLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                CLayout.Parent = Container
-
-                local open = false
-                for _, opt in ipairs(options) do
-                    local OptBtn = Instance.new("TextButton")
-                    OptBtn.Size = UDim2.new(1, 0, 0, 24)
-                    OptBtn.BackgroundTransparency = 1
-                    OptBtn.Text = "  " .. opt
-                    OptBtn.Font = Enum.Font.Gotham
-                    OptBtn.TextSize = 11
-                    OptBtn.TextXAlignment = Enum.TextXAlignment.Left
-                    OptBtn.ZIndex = 31
-                    OptBtn.Parent = Container
-                    Neverlose:RegisterTheme(OptBtn, "TextColor3", "SubTextColor")
-
-                    OptBtn.MouseButton1Click:Connect(function()
-                        selected = opt
-                        Box.Text = "  " .. selected
-                        Container.Visible = false
-                        open = false
-                        Tween(ArrowIcon, 0.2, {Rotation = 0})
-                        callback(selected)
-                    end)
-                end
-
-                Box.MouseButton1Click:Connect(function()
-                    open = not open
-                    Container.Visible = open
-                    Tween(ArrowIcon, 0.2, {Rotation = open and 180 or 0})
-                end)
-            end
-
-            -- 4. MULTI-DROPDOWN (Множественный выбор)
-            function SectionObj:CreateMultiDropdown(opts)
-                opts = opts or {}
-                local name = opts.Name or "Multi Dropdown"
-                local options = opts.Options or {}
-                local selected = opts.Default or {}
-                local callback = opts.Callback or function() end
-
-                local DropFrame = Instance.new("Frame")
-                DropFrame.Size = UDim2.new(1, 0, 0, 44)
-                DropFrame.BackgroundTransparency = 1
-                DropFrame.ZIndex = 5
-                DropFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = DropFrame })
-
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, 0, 0, 16)
-                Label.Text = name
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = DropFrame
-                Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
-
-                local selectedSet = {}
-                for _, item in ipairs(selected) do selectedSet[item] = true end
-
-                local function GetFormattedText()
-                    local list = {}
-                    for opt, act in pairs(selectedSet) do
-                        if act then table.insert(list, opt) end
-                    end
-                    if #list == 0 then return "None" end
-                    return table.concat(list, ", ")
-                end
-
-                local Box = Instance.new("TextButton")
-                Box.Size = UDim2.new(1, 0, 0, 24)
-                Box.Position = UDim2.new(0, 0, 0, 20)
-                Box.Text = "  " .. GetFormattedText()
-                Box.Font = Enum.Font.Gotham
-                Box.TextSize = 11
-                Box.TextXAlignment = Enum.TextXAlignment.Left
-                Box.TextTruncate = Enum.TextTruncate.AtEnd
-                Box.ZIndex = 6
-                Box.Parent = DropFrame
-                Neverlose:RegisterTheme(Box, "BackgroundColor3", "ElementBg", "ElementTransparency")
-                Neverlose:RegisterTheme(Box, "TextColor3", "TextColor")
-
-                local BoxCorner = Instance.new("UICorner")
-                BoxCorner.CornerRadius = UDim.new(0, 6)
-                BoxCorner.Parent = Box
-
-                local ArrowIcon = Instance.new("ImageLabel")
-                ArrowIcon.Size = UDim2.new(0, 12, 0, 12)
-                ArrowIcon.Position = UDim2.new(1, -20, 0.5, -6)
-                ArrowIcon.BackgroundTransparency = 1
-                ArrowIcon.Image = GetAsset(Neverlose.Icons.ChevronDown, "chevron.png")
-                ArrowIcon.ZIndex = 7
-                ArrowIcon.Parent = Box
-                Neverlose:RegisterAccent(ArrowIcon, "ImageColor3")
-
-                local Container = Instance.new("Frame")
-                Container.Size = UDim2.new(1, 0, 0, #options * 24)
-                Container.Position = UDim2.new(0, 0, 1, 4)
-                Container.Visible = false
-                Container.ZIndex = 30
-                Container.Parent = Box
-                Neverlose:RegisterTheme(Container, "BackgroundColor3", "CardBg")
-
-                local CCorner = Instance.new("UICorner")
-                CCorner.CornerRadius = UDim.new(0, 6)
-                CCorner.Parent = Container
-
-                local CLayout = Instance.new("UIListLayout")
-                CLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                CLayout.Parent = Container
-
-                local open = false
-                for _, opt in ipairs(options) do
-                    local OptBtn = Instance.new("TextButton")
-                    OptBtn.Size = UDim2.new(1, 0, 0, 24)
-                    OptBtn.BackgroundTransparency = 1
-                    OptBtn.Text = (selectedSet[opt] and "  ✓ " or "    ") .. opt
-                    OptBtn.Font = Enum.Font.Gotham
-                    OptBtn.TextSize = 11
-                    OptBtn.TextXAlignment = Enum.TextXAlignment.Left
-                    OptBtn.ZIndex = 31
-                    OptBtn.Parent = Container
-                    if selectedSet[opt] then
-                        Neverlose:RegisterAccent(OptBtn, "TextColor3")
-                    else
-                        Neverlose:RegisterTheme(OptBtn, "TextColor3", "SubTextColor")
-                    end
-
-                    OptBtn.MouseButton1Click:Connect(function()
-                        selectedSet[opt] = not selectedSet[opt]
-                        OptBtn.Text = (selectedSet[opt] and "  ✓ " or "    ") .. opt
-                        if selectedSet[opt] then
-                            OptBtn.TextColor3 = Neverlose.AccentColor
-                        else
-                            local theme = Neverlose.Themes[Neverlose.CurrentTheme]
-                            OptBtn.TextColor3 = theme.SubTextColor
-                        end
-                        Box.Text = "  " .. GetFormattedText()
-                        callback(selectedSet)
-                    end)
-                end
-
-                Box.MouseButton1Click:Connect(function()
-                    open = not open
-                    Container.Visible = open
-                    Tween(ArrowIcon, 0.2, {Rotation = open and 180 or 0})
-                end)
-            end
-
-            -- 5. PILLS / TAGS GRID (Сетка выбора элементов ESP/флагов)
-            function SectionObj:CreatePills(opts)
-                opts = opts or {}
-                local name = opts.Name or "Pills"
-                local options = opts.Options or {}
-                local defaultSelected = opts.Default or {}
-                local callback = opts.Callback or function() end
-
-                local PillFrame = Instance.new("Frame")
-                PillFrame.Size = UDim2.new(1, 0, 0, 0)
-                PillFrame.AutomaticSize = Enum.AutomaticSize.Y
-                PillFrame.BackgroundTransparency = 1
-                PillFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = PillFrame })
-
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, 0, 0, 16)
-                Label.Text = name
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = PillFrame
-                Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
-
-                local Container = Instance.new("Frame")
-                Container.Size = UDim2.new(1, 0, 0, 0)
-                Container.Position = UDim2.new(0, 0, 0, 20)
-                Container.AutomaticSize = Enum.AutomaticSize.Y
-                Container.BackgroundTransparency = 1
-                Container.Parent = PillFrame
-
-                local GridLayout = Instance.new("UIGridLayout")
-                GridLayout.CellSize = UDim2.new(0, 68, 0, 22)
-                GridLayout.CellPadding = UDim2.new(0, 5, 0, 5)
-                GridLayout.Parent = Container
-
-                local stateMap = {}
-                for _, item in ipairs(defaultSelected) do stateMap[item] = true end
-
-                for _, opt in ipairs(options) do
-                    local Pill = Instance.new("TextButton")
-                    Pill.Text = opt
-                    Pill.Font = Enum.Font.Gotham
-                    Pill.TextSize = 10
-                    Pill.Parent = Container
-
-                    local PCorner = Instance.new("UICorner")
-                    PCorner.CornerRadius = UDim.new(0, 4)
-                    PCorner.Parent = Pill
-
-                    local active = stateMap[opt] == true
-
-                    local function UpdatePill()
-                        if active then
-                            Pill.BackgroundColor3 = Neverlose.AccentColor
-                            Pill.BackgroundTransparency = 0
-                            Pill.TextColor3 = Color3.fromRGB(255, 255, 255)
-                        else
-                            local theme = Neverlose.Themes[Neverlose.CurrentTheme]
-                            Pill.BackgroundColor3 = theme.ElementBg
-                            Pill.BackgroundTransparency = theme.ElementTransparency
-                            Pill.TextColor3 = theme.SubTextColor
-                        end
-                    end
-
-                    UpdatePill()
-
-                    Pill.MouseButton1Click:Connect(function()
-                        active = not active
-                        stateMap[opt] = active
-                        UpdatePill()
-                        callback(stateMap)
-                    end)
-                end
-            end
-
-            -- 6. COLOR PICKER
-            function SectionObj:CreateColorPicker(opts)
-                opts = opts or {}
-                local name = opts.Name or "Color"
-                local currentColor = opts.Default or Neverlose.AccentColor
-                local callback = opts.Callback or function() end
-
-                local h, s, v = Color3.toHSV(currentColor)
-
-                local ColorFrame = Instance.new("Frame")
-                ColorFrame.Size = UDim2.new(1, 0, 0, 24)
-                ColorFrame.BackgroundTransparency = 1
-                ColorFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = ColorFrame })
-
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, -30, 1, 0)
-                Label.Text = name
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = ColorFrame
-                Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
-
-                local ColorBox = Instance.new("TextButton")
-                ColorBox.Size = UDim2.new(0, 22, 0, 14)
-                ColorBox.Position = UDim2.new(1, -22, 0.5, -7)
-                ColorBox.BackgroundColor3 = currentColor
-                ColorBox.Text = ""
-                ColorBox.Parent = ColorFrame
-
-                local BoxCorner = Instance.new("UICorner")
-                BoxCorner.CornerRadius = UDim.new(0, 4)
-                BoxCorner.Parent = ColorBox
-
-                local PickerWindow = Instance.new("Frame")
-                PickerWindow.Size = UDim2.new(0, 180, 0, 160)
-                PickerWindow.ZIndex = 200
-                PickerWindow.Visible = false
-                PickerWindow.Parent = MainFrame
-                Neverlose:RegisterTheme(PickerWindow, "BackgroundColor3", "CardBg")
-
-                local PCorner = Instance.new("UICorner")
-                PCorner.CornerRadius = UDim.new(0, 8)
-                PCorner.Parent = PickerWindow
-
-                local PStroke = Instance.new("UIStroke")
-                PStroke.Thickness = 1
-                PStroke.Parent = PickerWindow
-                Neverlose:RegisterTheme(PStroke, "Color", "BorderColor", "BorderTransparency")
-
-                local SVBox = Instance.new("TextButton")
-                SVBox.Size = UDim2.new(0, 130, 0, 130)
-                SVBox.Position = UDim2.new(0, 10, 0, 15)
-                SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-                SVBox.Text = ""
-                SVBox.ZIndex = 201
-                SVBox.Parent = PickerWindow
-
-                local WhiteGrad = Instance.new("Frame")
-                WhiteGrad.Size = UDim2.new(1, 0, 1, 0)
-                WhiteGrad.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                WhiteGrad.ZIndex = 202
-                WhiteGrad.Parent = SVBox
-
-                local WGrad = Instance.new("UIGradient")
-                WGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)})
-                WGrad.Parent = WhiteGrad
-
-                local BlackGrad = Instance.new("Frame")
-                BlackGrad.Size = UDim2.new(1, 0, 1, 0)
-                BlackGrad.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                BlackGrad.ZIndex = 203
-                BlackGrad.Parent = SVBox
-
-                local BGrad = Instance.new("UIGradient")
-                BGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)})
-                BGrad.Rotation = 90
-                BGrad.Parent = BlackGrad
-
-                local SVCursor = Instance.new("Frame")
-                SVCursor.Size = UDim2.new(0, 10, 0, 10)
-                SVCursor.Position = UDim2.new(s, -5, 1 - v, -5)
-                SVCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                SVCursor.ZIndex = 205
-                SVCursor.Parent = SVBox
-
-                local SVCurserCorner = Instance.new("UICorner")
-                SVCurserCorner.CornerRadius = UDim.new(1, 0)
-                SVCurserCorner.Parent = SVCursor
-
-                local HueSlider = Instance.new("TextButton")
-                HueSlider.Size = UDim2.new(0, 18, 0, 130)
-                HueSlider.Position = UDim2.new(0, 150, 0, 15)
-                HueSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                HueSlider.Text = ""
-                HueSlider.ZIndex = 201
-                HueSlider.Parent = PickerWindow
-
-                local HueGradient = Instance.new("UIGradient")
-                HueGradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
-                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
-                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
-                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
-                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
-                    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-                })
-                HueGradient.Rotation = 90
-                HueGradient.Parent = HueSlider
-
-                local draggingSV, draggingHue = false, false
-
-                local function UpdateColor()
-                    currentColor = Color3.fromHSV(h, s, v)
-                    SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-                    ColorBox.BackgroundColor3 = currentColor
-                    callback(currentColor)
-                end
-
-                local function UpdateSV(input)
-                    s = math.clamp((input.Position.X - SVBox.AbsolutePosition.X) / SVBox.AbsoluteSize.X, 0, 1)
-                    v = 1 - math.clamp((input.Position.Y - SVBox.AbsolutePosition.Y) / SVBox.AbsoluteSize.Y, 0, 1)
-                    SVCursor.Position = UDim2.new(s, -5, 1 - v, -5)
-                    UpdateColor()
-                end
-
-                local function UpdateHue(input)
-                    h = math.clamp((input.Position.Y - HueSlider.AbsolutePosition.Y) / HueSlider.AbsoluteSize.Y, 0, 1)
-                    UpdateColor()
-                end
-
-                SVBox.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSV = true UpdateSV(input) end
-                end)
-                HueSlider.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingHue = true UpdateHue(input) end
-                end)
-
-                UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSV = false draggingHue = false end
-                end)
-
-                UserInputService.InputChanged:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseMovement then
-                        if draggingSV then UpdateSV(input) end
-                        if draggingHue then UpdateHue(input) end
-                    end
-                end)
-
-                ColorBox.MouseButton1Click:Connect(function()
-                    PickerWindow.Visible = not PickerWindow.Visible
-                    if PickerWindow.Visible then
-                        local mouse = UserInputService:GetMouseLocation()
-                        PickerWindow.Position = UDim2.new(0, mouse.X - MainFrame.AbsolutePosition.X - 180, 0, mouse.Y - MainFrame.AbsolutePosition.Y)
-                    end
-                end)
-            end
-
-            -- 7. KEYBIND BUTTON (Кнопка назначения клавиши)
-            function SectionObj:CreateKeybind(opts)
-                opts = opts or {}
-                local name = opts.Name or "Keybind"
-                local currentKey = opts.Default or Enum.KeyCode.E
-                local callback = opts.Callback or function() end
-
-                local BindFrame = Instance.new("Frame")
-                BindFrame.Size = UDim2.new(1, 0, 0, 24)
-                BindFrame.BackgroundTransparency = 1
-                BindFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = BindFrame })
-
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, -60, 1, 0)
-                Label.Text = name
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = BindFrame
-                Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
-
-                local BindBtn = Instance.new("TextButton")
-                BindBtn.Size = UDim2.new(0, 50, 0, 20)
-                BindBtn.Position = UDim2.new(1, -50, 0.5, -10)
-                BindBtn.Text = currentKey.Name
-                BindBtn.Font = Enum.Font.Gotham
-                BindBtn.TextSize = 10
-                BindBtn.Parent = BindFrame
-                Neverlose:RegisterTheme(BindBtn, "BackgroundColor3", "ElementBg", "ElementTransparency")
-                Neverlose:RegisterTheme(BindBtn, "TextColor3", "SubTextColor")
-
-                local BtnCorner = Instance.new("UICorner")
-                BtnCorner.CornerRadius = UDim.new(0, 4)
-                BtnCorner.Parent = BindBtn
-
-                local listening = false
-                BindBtn.MouseButton1Click:Connect(function()
-                    listening = true
-                    BindBtn.Text = "..."
-                    Neverlose:RegisterAccent(BindBtn, "TextColor3")
-                end)
-
-                UserInputService.InputBegan:Connect(function(input)
-                    if listening and input.UserInputType == Enum.UserInputType.Keyboard then
-                        currentKey = input.KeyCode
-                        BindBtn.Text = currentKey.Name
-                        listening = false
-                        local theme = Neverlose.Themes[Neverlose.CurrentTheme]
-                        BindBtn.TextColor3 = theme.SubTextColor
-                        callback(currentKey)
-                    end
-                end)
-            end
-
-            -- 8. TEXTBOX
-            function SectionObj:CreateTextbox(opts)
-                opts = opts or {}
-                local name = opts.Name or "Textbox"
-                local defaultText = opts.Default or ""
-                local placeholder = opts.Placeholder or "Type..."
-                local callback = opts.Callback or function() end
-
-                local TextFrame = Instance.new("Frame")
-                TextFrame.Size = UDim2.new(1, 0, 0, 42)
-                TextFrame.BackgroundTransparency = 1
-                TextFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = TextFrame })
-
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, 0, 0, 16)
-                Label.Text = name
-                Label.Font = Enum.Font.GothamMedium
-                Label.TextSize = 12
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.BackgroundTransparency = 1
-                Label.Parent = TextFrame
-                Neverlose:RegisterTheme(Label, "TextColor3", "TextColor")
-
-                local Box = Instance.new("TextBox")
-                Box.Size = UDim2.new(1, 0, 0, 22)
-                Box.Position = UDim2.new(0, 0, 0, 20)
-                Box.Text = defaultText
-                Box.PlaceholderText = placeholder
-                Box.Font = Enum.Font.Gotham
-                Box.TextSize = 11
-                Box.Parent = TextFrame
-
-                Neverlose:RegisterTheme(Box, "BackgroundColor3", "ElementBg", "ElementTransparency")
-                Neverlose:RegisterTheme(Box, "TextColor3", "TextColor")
-                Neverlose:RegisterTheme(Box, "PlaceholderColor3", "SubTextColor")
-
-                local BoxCorner = Instance.new("UICorner")
-                BoxCorner.CornerRadius = UDim.new(0, 5)
-                BoxCorner.Parent = Box
-
-                Box:GetPropertyChangedSignal("Text"):Connect(function()
-                    callback(Box.Text)
-                end)
-            end
-
-            -- 9. BUTTON
-            function SectionObj:CreateButton(opts)
-                opts = opts or {}
-                local name = opts.Name or "Button"
-                local callback = opts.Callback or function() end
-
-                local BtnFrame = Instance.new("Frame")
-                BtnFrame.Size = UDim2.new(1, 0, 0, 28)
-                BtnFrame.BackgroundTransparency = 1
-                BtnFrame.Parent = ItemHolder
-
-                table.insert(WindowObj.AllElements, { Name = name, Frame = BtnFrame })
-
-                local Btn = Instance.new("TextButton")
-                Btn.Size = UDim2.new(1, 0, 1, 0)
-                Btn.Text = name
-                Btn.Font = Enum.Font.GothamMedium
-                Btn.TextSize = 12
-                Btn.Parent = BtnFrame
-                Neverlose:RegisterTheme(Btn, "BackgroundColor3", "ElementBg", "ElementTransparency")
-                Neverlose:RegisterTheme(Btn, "TextColor3", "TextColor")
-
-                local BtnCorner = Instance.new("UICorner")
-                BtnCorner.CornerRadius = UDim.new(0, 5)
-                BtnCorner.Parent = Btn
-
-                Btn.MouseButton1Click:Connect(function()
-                    Tween(Btn, 0.08, {BackgroundColor3 = Neverlose.AccentColor, BackgroundTransparency = 0})
-                    task.wait(0.08)
-                    local theme = Neverlose.Themes[Neverlose.CurrentTheme]
-                    Tween(Btn, 0.15, {BackgroundColor3 = theme.ElementBg, BackgroundTransparency = theme.ElementTransparency})
-                    callback()
-                end)
-            end
-
-            return SectionObj
+            return AttachItemCreators(ItemHolder, WindowObj.AllElements)
         end
 
         return TabObj
