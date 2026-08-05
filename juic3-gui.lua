@@ -71,7 +71,7 @@ local function GetIconAsset(iconName)
         end
     end
     
-    -- Дефолтный фоллбэк (стандартный ID лупы/глаза в Roblox, если внешняя загрузка недоступна)
+    -- Дефолтный фоллбэк (стандартный ID в Roblox, если внешняя загрузка недоступна)
     return "rbxassetid://6031763426"
 end
 
@@ -111,7 +111,7 @@ local function MakeDraggable(frame, handle)
 end
 
 -- ================================================================================
--- ОНОМАТИКА И СОЗДАНИЕ ОКНА (CreateWindow)
+-- СОЗДАНИЕ ОКНА (CreateWindow)
 -- ================================================================================
 
 function Library:CreateWindow(windowTitle)
@@ -240,7 +240,12 @@ function Library:CreateWindow(windowTitle)
     MainContainer.Position = UDim2.new(0.5, 0, 0.5, -30)
     MainContainer.AnchorPoint = Vector2.new(0.5, 0.5)
     MainContainer.BackgroundColor3 = Theme.MainBg
-    MainContainer.GroupTransparency = 0 -- ИСПРАВЛЕНО (0 = полностью виден)
+    
+    -- Корректное свойство прозрачности для CanvasGroup
+    pcall(function()
+        MainContainer.GroupTransparency = 0
+    end)
+    
     MainContainer.Parent = ScreenGui
     
     local MainCorner = Instance.new("UICorner", MainContainer)
@@ -279,10 +284,10 @@ function Library:CreateWindow(windowTitle)
             Library.IsOpen = not Library.IsOpen
             if Library.IsOpen then
                 MainContainer.Visible = true
-                Tween(MainContainer, 0.3, {GroupTransparency = 0}) -- ИСПРАВЛЕНО
+                pcall(function() Tween(MainContainer, 0.3, {GroupTransparency = 0}) end)
                 Tween(MainContainer, 0.3, {Size = UDim2.new(0, 600, 0, 420)})
             else
-                Tween(MainContainer, 0.25, {GroupTransparency = 1}) -- ИСПРАВЛЕНО
+                pcall(function() Tween(MainContainer, 0.25, {GroupTransparency = 1}) end)
                 local tw = Tween(MainContainer, 0.25, {Size = UDim2.new(0, 580, 0, 400)})
                 tw.Completed:Connect(function()
                     if not Library.IsOpen then MainContainer.Visible = false end
@@ -298,7 +303,7 @@ function Library:CreateWindow(windowTitle)
     end
 
     -- ----------------------------------------------------------------------------
-    -- ВЛАДКИ И СЕКЦИИ (Создание вкладок)
+    -- ВЛАДКИ И СЕКЦИИ
     -- ----------------------------------------------------------------------------
     function Window:CreateTab(tabName, iconName)
         local Tab = {
@@ -306,7 +311,7 @@ function Library:CreateWindow(windowTitle)
             Button = nil
         }
         
-        -- Создаем кнопка-иконку в Таскбар
+        -- Кнопка-иконка в Таскбар
         local TabIconButton = Instance.new("ImageButton")
         TabIconButton.Name = tabName .. "_Icon"
         TabIconButton.Size = UDim2.new(0, 36, 0, 36)
@@ -353,7 +358,7 @@ function Library:CreateWindow(windowTitle)
         Tab.IconButton = TabIconButton
         Tab.IconStroke = TabIconStroke
 
-        -- Метод создания под-вкладок (например: ESP / Radar / Builder)
+        -- Метод создания под-вкладок (ESP / Radar / Builder)
         function Tab:CreateSubTab(subTabName)
             local SubTab = {}
             
@@ -377,7 +382,7 @@ function Library:CreateWindow(windowTitle)
             Indicator.BorderSizePixel = 0
             Indicator.Parent = SubNavBtn
 
-            -- Сетка карточек (2х2 как на скриншоте)
+            -- Сетка карточек (2х2)
             local GridPage = Instance.new("Frame")
             GridPage.Name = subTabName .. "_Grid"
             GridPage.Size = UDim2.new(1, 0, 1, 0)
@@ -410,7 +415,7 @@ function Library:CreateWindow(windowTitle)
                 ActivateSubTab()
             end
 
-            -- Метод создания секций (Карточек "Boxes", "Texts", и т.д.)
+            -- Метод создания секций (Карточек)
             function SubTab:CreateSection(sectionTitle)
                 local Section = {}
                 
@@ -426,7 +431,7 @@ function Library:CreateWindow(windowTitle)
                 CardStroke.Color = Theme.Stroke
                 CardStroke.Thickness = 1
 
-                -- Заголовок секции с подчёркиванием
+                -- Заголовок секции
                 local TitleLabel = Instance.new("TextLabel")
                 TitleLabel.Size = UDim2.new(1, -20, 0, 25)
                 TitleLabel.Position = UDim2.new(0, 10, 0, 5)
