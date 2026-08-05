@@ -240,7 +240,7 @@ function Library:CreateWindow(windowTitle)
     MainContainer.Position = UDim2.new(0.5, 0, 0.5, -30)
     MainContainer.AnchorPoint = Vector2.new(0.5, 0.5)
     MainContainer.BackgroundColor3 = Theme.MainBg
-    MainContainer.GroupOpacity = 1
+    MainContainer.GroupTransparency = 0 -- ИСПРАВЛЕНО (0 = полностью виден)
     MainContainer.Parent = ScreenGui
     
     local MainCorner = Instance.new("UICorner", MainContainer)
@@ -279,10 +279,10 @@ function Library:CreateWindow(windowTitle)
             Library.IsOpen = not Library.IsOpen
             if Library.IsOpen then
                 MainContainer.Visible = true
-                Tween(MainContainer, 0.3, {GroupOpacity = 1})
+                Tween(MainContainer, 0.3, {GroupTransparency = 0}) -- ИСПРАВЛЕНО
                 Tween(MainContainer, 0.3, {Size = UDim2.new(0, 600, 0, 420)})
             else
-                Tween(MainContainer, 0.25, {GroupOpacity = 0})
+                Tween(MainContainer, 0.25, {GroupTransparency = 1}) -- ИСПРАВЛЕНО
                 local tw = Tween(MainContainer, 0.25, {Size = UDim2.new(0, 580, 0, 400)})
                 tw.Completed:Connect(function()
                     if not Library.IsOpen then MainContainer.Visible = false end
@@ -707,7 +707,6 @@ function Library:CreateWindow(windowTitle)
                     PreviewCorner.CornerRadius = UDim.new(0, 4)
 
                     Preview.MouseButton1Click:Connect(function()
-                        -- Переключаем несколько палитровых цветов при каждом клике (для демонстрации)
                         local palette = {
                             Color3.fromRGB(110, 80, 255),
                             Color3.fromRGB(255, 50, 50),
@@ -739,5 +738,4 @@ function Library:CreateWindow(windowTitle)
     return Window
 end
 
--- Возвращаем библиотеку для loadstring
 return Library
